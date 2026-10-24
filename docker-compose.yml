@@ -9,7 +9,7 @@
 services:
   bootstrap:
     image: lscr.io/linuxserver/calibre-web:0.6.27-ls406
-    entrypoint: ["python3", "/init/init_books.py"]
+    entrypoint: ["python3", "/sageware-bootstrap/init_books.py"]
     environment:
       ADMIN_NAME: ${ADMIN_NAME}
       ADMIN_EMAIL: ${ADMIN_EMAIL}
@@ -19,7 +19,7 @@ services:
     volumes:
       - books_config:/config
       - books_library:/books
-      - ./bootstrap:/init:ro
+      - ./bootstrap:/sageware-bootstrap:ro
     restart: "no"
     mem_limit: 512m
 
