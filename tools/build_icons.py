@@ -15,7 +15,7 @@ ICONS = [
     "chevron-down", "mail", "database", "sliders-horizontal", "palette", "clock", "file-text", "refresh-cw",
     "power", "rotate-ccw", "package", "user-cog", "check", "x", "shield", "hard-drive", "pencil", "arrow-up-circle",
     "send", "headphones", "chevron-left", "external-link", "link", "calendar", "building", "globe", "hash", "book-marked",
-    "grip-vertical", "ellipsis", "arrow-up-down", "trash-2", "globe-lock", "lock",
+    "grip-vertical", "ellipsis", "arrow-up-down", "trash-2", "globe-lock", "lock", "copy", "chevron-right",
 ]
 OUT = Path(__file__).resolve().parent.parent / "overrides/static/sageware/icons.svg"
 

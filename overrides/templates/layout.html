@@ -203,6 +203,33 @@
               {% endif %}
             </ul>
           </nav>
+          {# Kept outside nav.navigation: intention.js re-appends #scnd-nav there, and moves it to the navbar on phones. #}
+          {% if g.current_theme == 0 and not current_user.is_anonymous %}
+          <button type="button" class="sw-opds-promo" data-toggle="modal" data-target="#swOpdsModal">
+            <svg class="sw-opds-promo-art" viewBox="0 0 120 72" aria-hidden="true">
+              <rect x="10" y="10" width="54" height="58" rx="7" fill="#fff" opacity="0.16"/>
+              <rect x="16" y="16" width="42" height="46" rx="3" fill="#fff" opacity="0.92"/>
+              <rect x="21" y="22" width="14" height="19" rx="2" fill="#e8c170"/>
+              <rect x="39" y="22" width="14" height="19" rx="2" fill="#c8553d"/>
+              <rect x="21" y="46" width="32" height="3" rx="1.5" fill="#3d7a68" opacity="0.5"/>
+              <rect x="21" y="52" width="22" height="3" rx="1.5" fill="#3d7a68" opacity="0.35"/>
+              <rect x="74" y="24" width="30" height="46" rx="6" fill="#17382f"/>
+              <rect x="77" y="29" width="24" height="34" rx="2" fill="#f6efe2"/>
+              <rect x="80" y="33" width="18" height="2.5" rx="1.25" fill="#3d405b" opacity="0.7"/>
+              <rect x="80" y="38" width="14" height="2.5" rx="1.25" fill="#3d405b" opacity="0.5"/>
+              <rect x="80" y="43" width="16" height="2.5" rx="1.25" fill="#3d405b" opacity="0.5"/>
+              <rect x="80" y="48" width="11" height="2.5" rx="1.25" fill="#3d405b" opacity="0.5"/>
+              <g fill="none" stroke="#e8c170" stroke-width="3" stroke-linecap="round">
+                <path d="M84 6a14 14 0 0 1 14 14"/>
+                <path d="M84 0a20 20 0 0 1 20 20" opacity="0.55"/>
+              </g>
+              <circle cx="85" cy="19" r="2.6" fill="#e8c170"/>
+            </svg>
+            <span class="sw-opds-promo-title">{{_('Use your own reader with OPDS')}}</span>
+            <span class="sw-opds-promo-text">{{_('Browse and download these books in KOReader, Thorium and other reading apps.')}}</span>
+            <span class="sw-opds-promo-cta">{{_('See how')}}{{ sw.icon('chevron-right') }}</span>
+          </button>
+          {% endif %}
         </div>
         {% endif %}
         <div class="col-sm-10">
@@ -248,6 +275,211 @@
         </div>
       </div>
     </div>
+    {# Sageware: "Use your own reader app", a step-by-step guide to adding the OPDS feed, opened from the sidebar card. #}
+    {% if g.current_theme == 0 and not current_user.is_anonymous %}
+    <div class="modal fade sw-opds" id="swOpdsModal" tabindex="-1" role="dialog" aria-labelledby="swOpdsTitle">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <svg width="0" height="0" class="sw-opds-defs" aria-hidden="true">
+            <symbol id="sw-opds-phone" viewBox="0 0 120 200">
+              <rect width="120" height="200" rx="18" fill="#1c1b19"/>
+              <rect x="6" y="6" width="108" height="188" rx="13" fill="#fff"/>
+              <rect x="44" y="12" width="32" height="6" rx="3" fill="#1c1b19"/>
+            </symbol>
+          </svg>
+          <div class="sw-opds-head">
+            <span class="sw-opds-count" aria-live="polite"></span>
+            <h4 class="modal-title sr-only" id="swOpdsTitle">{{_('Use your own reader app')}}</h4>
+            <button type="button" class="sw-drawer-icon" data-dismiss="modal" title="{{_('Close')}}">{{ sw.icon('x') }}<span class="sr-only">{{_('Close')}}</span></button>
+          </div>
+          <div class="sw-opds-viewport">
+            <div class="sw-opds-track">
+
+              <section class="sw-opds-slide">
+                <svg class="sw-opds-art" viewBox="0 0 480 220" aria-hidden="true">
+                  <rect x="40" y="46" width="150" height="128" rx="12" fill="#fff" stroke="#e7e5e2"/>
+                  <rect x="40" y="46" width="150" height="26" rx="12" fill="#fff"/>
+                  <line x1="40" x2="190" y1="72.5" y2="72.5" stroke="#e7e5e2"/>
+                  <rect x="52" y="54" width="10" height="10" rx="3" fill="#3d7a68"/>
+                  <rect x="68" y="57" width="44" height="5" rx="2.5" fill="#1c1b19" opacity="0.7"/>
+                  {% for bg in ['#1f3a5f', '#c8553d', '#2d6a4f', '#f2c14e'] %}
+                    <rect x="{{ 54 + loop.index0 * 32 }}" y="86" width="24" height="34" rx="3" fill="{{ bg }}"/>
+                    <rect x="{{ 54 + loop.index0 * 32 }}" y="126" width="20" height="3" rx="1.5" fill="#1c1b19" opacity="0.5"/>
+                  {% endfor %}
+                  <rect x="54" y="142" width="122" height="20" rx="5" fill="#f4f4f2"/>
+                  <path d="M196 110 H318" stroke="#3d7a68" stroke-width="2" stroke-dasharray="4 5" fill="none"/>
+                  <rect x="222" y="96" width="70" height="28" rx="14" fill="#3d7a68"/>
+                  <text x="257" y="114.5" text-anchor="middle" font-size="12" font-weight="700" fill="#fff" font-family="Inter, sans-serif" letter-spacing="0.6">OPDS</text>
+                  <use href="#sw-opds-phone" x="326" y="10" width="120" height="200"/>
+                  <rect x="342" y="34" width="50" height="6" rx="3" fill="#1c1b19" opacity="0.75"/>
+                  {% for bg in ['#1f3a5f', '#c8553d', '#2d6a4f', '#f2c14e'] %}
+                    <rect x="{{ 342 + (loop.index0 % 2) * 46 }}" y="{{ 50 + (loop.index0 // 2) * 72 }}" width="40" height="58" rx="4" fill="{{ bg }}"/>
+                    <rect x="{{ 342 + (loop.index0 % 2) * 46 }}" y="{{ 112 + (loop.index0 // 2) * 72 }}" width="30" height="3.5" rx="1.75" fill="#1c1b19" opacity="0.5"/>
+                  {% endfor %}
+                </svg>
+                <div class="sw-opds-copy">
+                  <h3>{{_('Your library, in your reader app')}}</h3>
+                  <p>{{_('OPDS is an open catalog format that most reading apps understand. Add %(name)s once, then browse, search and download books without leaving the app you read in.', name=instance)}}</p>
+                </div>
+              </section>
+
+              <section class="sw-opds-slide">
+                <svg class="sw-opds-art" viewBox="0 0 480 220" aria-hidden="true">
+                  <rect x="44" y="30" width="118" height="164" rx="12" fill="#3a3936"/>
+                  <rect x="54" y="40" width="98" height="132" rx="3" fill="#ecebe6"/>
+                  {% for w in [70, 82, 64, 78, 58, 74, 40] %}
+                    <rect x="64" y="{{ 52 + loop.index0 * 15 }}" width="{{ w }}" height="5" rx="2.5" fill="#55524d" opacity="0.6"/>
+                  {% endfor %}
+                  <rect x="88" y="180" width="30" height="5" rx="2.5" fill="#55524d"/>
+                  <use href="#sw-opds-phone" x="180" y="10" width="120" height="200"/>
+                  <rect x="196" y="34" width="88" height="22" rx="6" fill="#e9f2ee"/>
+                  <rect x="204" y="42" width="40" height="6" rx="3" fill="#3d7a68"/>
+                  {% for i in range(4) %}
+                    <rect x="196" y="{{ 66 + i * 30 }}" width="18" height="24" rx="3" fill="{{ ['#6d597a', '#e07a5f', '#264653', '#b5838d'][i] }}"/>
+                    <rect x="220" y="{{ 70 + i * 30 }}" width="56" height="5" rx="2.5" fill="#1c1b19" opacity="0.7"/>
+                    <rect x="220" y="{{ 80 + i * 30 }}" width="36" height="4" rx="2" fill="#a19d97"/>
+                  {% endfor %}
+                  <rect x="318" y="58" width="128" height="96" rx="8" fill="#fff" stroke="#d6d3cf"/>
+                  <circle cx="330" cy="69" r="3" fill="#e07a5f"/><circle cx="340" cy="69" r="3" fill="#f2c14e"/><circle cx="350" cy="69" r="3" fill="#2d6a4f"/>
+                  <line x1="318" x2="446" y1="79.5" y2="79.5" stroke="#e7e5e2"/>
+                  <rect x="330" y="90" width="30" height="42" rx="3" fill="#1f3a5f"/>
+                  {% for w in [64, 52, 70, 44] %}
+                    <rect x="368" y="{{ 92 + loop.index0 * 11 }}" width="{{ w }}" height="4" rx="2" fill="#6f6b66" opacity="0.6"/>
+                  {% endfor %}
+                  <rect x="358" y="154" width="48" height="10" rx="2" fill="#d6d3cf"/>
+                  <rect x="340" y="164" width="84" height="5" rx="2.5" fill="#d6d3cf"/>
+                </svg>
+                <div class="sw-opds-copy">
+                  <h3>{{_('Pick a reader app')}}</h3>
+                  <p>{{_('Any app that can add OPDS catalogs will work. A few good ones:')}}</p>
+                  <dl class="sw-opds-apps">
+                    <dt>{{_('Phone & tablet')}}</dt><dd>KyBook 3 <small>(iPhone, iPad)</small>, Moon+ Reader <small>(Android)</small>, KOReader <small>(Android)</small></dd>
+                    <dt>{{_('eReader')}}</dt><dd>KOReader <small>(Kobo, Kindle, PocketBook)</small></dd>
+                    <dt>{{_('Computer')}}</dt><dd>Thorium Reader <small>(Windows, Mac, Linux)</small></dd>
+                  </dl>
+                </div>
+              </section>
+
+              <section class="sw-opds-slide">
+                <svg class="sw-opds-art" viewBox="0 0 480 220" aria-hidden="true">
+                  <rect x="56" y="78" width="368" height="56" rx="28" fill="#fff" stroke="#d6d3cf"/>
+                  <circle cx="86" cy="106" r="16" fill="#e9f2ee"/>
+                  <g fill="none" stroke="#3d7a68" stroke-width="2.6" stroke-linecap="round">
+                    <path d="M80 98a10 10 0 0 1 10 10"/><path d="M80 92a16 16 0 0 1 16 16"/>
+                  </g>
+                  <circle cx="81" cy="107" r="2.4" fill="#3d7a68"/>
+                  <rect x="112" y="101" width="150" height="9" rx="4.5" fill="#1c1b19" opacity="0.7"/>
+                  <rect x="268" y="101" width="40" height="9" rx="4.5" fill="#3d7a68"/>
+                  <rect x="338" y="90" width="72" height="32" rx="16" fill="#3d7a68"/>
+                  <g fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round">
+                    <rect x="352" y="100" width="9" height="11" rx="2"/><path d="M356 97h7a2 2 0 0 1 2 2v9"/>
+                  </g>
+                  <text x="389" y="110.5" text-anchor="middle" font-size="11" font-weight="600" fill="#fff" font-family="Inter, sans-serif">{{_('Copy')}}</text>
+                  <path d="M384 136 l10 28 4-11 11-4z" fill="#1c1b19" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+                </svg>
+                <div class="sw-opds-copy">
+                  <h3>{{_('Copy the catalog address')}}</h3>
+                  <p>{{_('This is the address your app connects to.')}}</p>
+                  <div class="sw-opds-url">
+                    <input type="text" class="form-control" id="sw-opds-url" readonly value="{{ url_for('opds.feed_index') }}" aria-label="{{_('OPDS catalog address')}}">
+                    <button type="button" class="btn btn-default" id="sw-opds-copy" data-done="{{_('Copied')}}">{{ sw.icon('copy') }}<span>{{_('Copy')}}</span></button>
+                  </div>
+                </div>
+              </section>
+
+              <section class="sw-opds-slide">
+                <svg class="sw-opds-art" viewBox="0 0 480 220" aria-hidden="true">
+                  <use href="#sw-opds-phone" x="180" y="10" width="120" height="200"/>
+                  <rect x="196" y="34" width="56" height="7" rx="3.5" fill="#1c1b19" opacity="0.75"/>
+                  <rect x="196" y="52" width="88" height="20" rx="5" fill="#f4f4f2"/>
+                  <rect x="204" y="59" width="44" height="6" rx="3" fill="#6f6b66" opacity="0.6"/>
+                  <rect x="196" y="78" width="88" height="20" rx="5" fill="#f4f4f2"/>
+                  <rect x="204" y="85" width="36" height="6" rx="3" fill="#6f6b66" opacity="0.6"/>
+                  <rect x="196" y="108" width="88" height="76" rx="8" fill="#fff" stroke="#3d7a68" stroke-width="1.5"/>
+                  <rect x="204" y="117" width="30" height="4" rx="2" fill="#a19d97"/>
+                  <rect x="204" y="124" width="72" height="14" rx="4" fill="#f4f4f2"/>
+                  <rect x="209" y="129" width="34" height="4" rx="2" fill="#1c1b19" opacity="0.7"/>
+                  <rect x="204" y="144" width="24" height="4" rx="2" fill="#a19d97"/>
+                  <rect x="204" y="151" width="72" height="14" rx="4" fill="#e9f2ee" stroke="#3d7a68"/>
+                  <rect x="209" y="156" width="56" height="4" rx="2" fill="#3d7a68"/>
+                  <rect x="246" y="170" width="30" height="9" rx="4.5" fill="#3d7a68"/>
+                  <rect x="318" y="140" width="112" height="34" rx="10" fill="#fff" stroke="#e7e5e2"/>
+                  <path d="M318 157 l-12 0" stroke="#3d7a68" stroke-width="2" stroke-dasharray="3 3"/>
+                  <text x="374" y="161" text-anchor="middle" font-size="11.5" font-weight="600" fill="#3d7a68" font-family="Inter, sans-serif">{{_('Paste address')}}</text>
+                  <rect x="62" y="52" width="104" height="34" rx="10" fill="#fff" stroke="#e7e5e2"/>
+                  <path d="M166 69 l20 0" stroke="#3d7a68" stroke-width="2" stroke-dasharray="3 3"/>
+                  <text x="114" y="73" text-anchor="middle" font-size="11.5" font-weight="600" fill="#3d7a68" font-family="Inter, sans-serif">{{_('Add catalog')}}</text>
+                </svg>
+                <div class="sw-opds-copy">
+                  <h3>{{_('Add it as a catalog')}}</h3>
+                  <p>{{_('In your app, look for OPDS or online catalogs (usually under Library, Network or Browse). Add a new one, paste the address, and name it %(name)s.', name=instance)}}</p>
+                </div>
+              </section>
+
+              <section class="sw-opds-slide">
+                <svg class="sw-opds-art" viewBox="0 0 480 220" aria-hidden="true">
+                  <use href="#sw-opds-phone" x="180" y="10" width="120" height="200"/>
+                  <circle cx="240" cy="58" r="18" fill="#e9f2ee"/>
+                  <g fill="none" stroke="#3d7a68" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+                    <rect x="231" y="56" width="18" height="13" rx="3"/><path d="M235 56v-4a5 5 0 0 1 10 0v4"/>
+                  </g>
+                  <rect x="196" y="90" width="88" height="20" rx="5" fill="#f4f4f2"/>
+                  <rect x="204" y="97" width="40" height="6" rx="3" fill="#1c1b19" opacity="0.7"/>
+                  <rect x="196" y="116" width="88" height="20" rx="5" fill="#f4f4f2"/>
+                  {% for i in range(7) %}<circle cx="{{ 207 + i * 9 }}" cy="126" r="2.6" fill="#1c1b19" opacity="0.7"/>{% endfor %}
+                  <rect x="196" y="146" width="88" height="22" rx="6" fill="#3d7a68"/>
+                  <rect x="224" y="154" width="32" height="6" rx="3" fill="#fff"/>
+                  <rect x="56" y="78" width="110" height="46" rx="12" fill="#fff" stroke="#e7e5e2"/>
+                  <circle cx="80" cy="101" r="13" fill="#3d7a68"/>
+                  <text x="80" y="105.5" text-anchor="middle" font-size="13" font-weight="700" fill="#fff" font-family="Inter, sans-serif">{{ current_user.name[:1]|upper }}</text>
+                  <rect x="100" y="94" width="52" height="6" rx="3" fill="#1c1b19" opacity="0.7"/>
+                  <rect x="100" y="105" width="36" height="5" rx="2.5" fill="#a19d97"/>
+                  <path d="M166 101 l20 0" stroke="#3d7a68" stroke-width="2" stroke-dasharray="3 3"/>
+                </svg>
+                <div class="sw-opds-copy">
+                  <h3>{{_('Sign in with your account')}}</h3>
+                  <p>{{_('When the app asks, use your %(name)s username and password. Your username is', name=instance)}} <b>{{ current_user.name }}</b>.</p>
+                  <p class="sw-opds-note">{{_('Usually sign in with Google, GitHub or a magic link? Set a password in')}} <a href="{{ url_for('web.profile') }}">{{_('Account')}}</a> {{_('first.')}}</p>
+                </div>
+              </section>
+
+              <section class="sw-opds-slide">
+                <svg class="sw-opds-art" viewBox="0 0 480 220" aria-hidden="true">
+                  <use href="#sw-opds-phone" x="180" y="10" width="120" height="200"/>
+                  <rect x="196" y="34" width="50" height="7" rx="3.5" fill="#1c1b19" opacity="0.75"/>
+                  {% for bg in ['#3d405b', '#e07a5f', '#264653', '#8d99ae', '#6d597a', '#f2c14e'] %}
+                    <rect x="{{ 196 + (loop.index0 % 3) * 30 }}" y="{{ 50 + (loop.index0 // 3) * 56 }}" width="26" height="40" rx="3" fill="{{ bg }}"/>
+                    <rect x="{{ 196 + (loop.index0 % 3) * 30 }}" y="{{ 94 + (loop.index0 // 3) * 56 }}" width="20" height="3" rx="1.5" fill="#1c1b19" opacity="0.5"/>
+                  {% endfor %}
+                  <circle cx="250" cy="106" r="11" fill="#3d7a68" stroke="#fff" stroke-width="2.5"/>
+                  <path d="M250 100v10m-4.5-4.5 4.5 4.5 4.5-4.5" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <rect x="196" y="170" width="88" height="18" rx="9" fill="#1c1b19"/>
+                  <circle cx="207" cy="179" r="4.5" fill="#3d7a68"/>
+                  <path d="M205 179l1.5 1.5 3-3" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+                  <rect x="216" y="177" width="54" height="4" rx="2" fill="#fff" opacity="0.85"/>
+                  <rect x="318" y="62" width="112" height="96" rx="10" fill="#f6efe2"/>
+                  {% for w in [80, 88, 70, 84, 62, 76] %}
+                    <rect x="330" y="{{ 76 + loop.index0 * 12 }}" width="{{ w }}" height="4" rx="2" fill="#3d405b" opacity="0.55"/>
+                  {% endfor %}
+                  <path d="M300 110 l14 0" stroke="#3d7a68" stroke-width="2" stroke-dasharray="3 3"/>
+                </svg>
+                <div class="sw-opds-copy">
+                  <h3>{{_('Browse and download')}}</h3>
+                  <p>{{_('Shelves, new books, authors and categories show up right in the app. Tap a book to download it and start reading.')}}</p>
+                </div>
+              </section>
+
+            </div>
+          </div>
+          <div class="sw-opds-foot">
+            <div class="sw-opds-dots" role="tablist" aria-label="{{_('Steps')}}"></div>
+            <button type="button" class="btn btn-default" id="sw-opds-prev">{{_('Back')}}</button>
+            <button type="button" class="btn btn-primary" id="sw-opds-next" data-next="{{_('Next')}}" data-done="{{_('Done')}}">{{_('Next')}}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
     {% block modal %}{% endblock %}
     <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
     <script src="{{ url_for('static', filename='js/libs/jquery.min.js') }}"></script>
@@ -327,6 +559,66 @@
           set(open);
           try { localStorage.setItem('sw-nav-more', open ? '1' : '0'); } catch (e) {}
         });
+      })();
+    </script>
+    <script>
+      // OPDS guide: a carousel of steps (buttons, dots, arrow keys), starting over each time it opens.
+      (function () {
+        var $modal = $('#swOpdsModal');
+        if (!$modal.length) return;
+        var track = $modal.find('.sw-opds-track')[0];
+        var slides = $modal.find('.sw-opds-slide');
+        var dots = $modal.find('.sw-opds-dots');
+        var count = $modal.find('.sw-opds-count');
+        var prev = $('#sw-opds-prev'), next = $('#sw-opds-next');
+        var url = $('#sw-opds-url'), copy = $('#sw-opds-copy');
+        var index = 0;
+        // Absolute address from the page's own origin: url_for(_external) can come out as http:// behind the proxy.
+        url.val(location.origin + url.val());
+        slides.each(function (i) {
+          $('<button type="button" role="tab">').attr('aria-label', i + 1).on('click', function () { go(i); }).appendTo(dots);
+        });
+        function go(i) {
+          index = Math.max(0, Math.min(slides.length - 1, i));
+          track.style.transform = 'translateX(' + (-100 * index) + '%)';
+          slides.each(function (n) { this.setAttribute('aria-hidden', n === index ? 'false' : 'true'); this.inert = n !== index; });
+          dots.children().each(function (n) { $(this).toggleClass('active', n === index).attr('aria-selected', n === index); });
+          count.text({{ _('Step %(n)s of %(total)s', n='{n}', total='{total}')|tojson }}.replace('{n}', index + 1).replace('{total}', slides.length));
+          prev.css('visibility', index ? 'visible' : 'hidden');
+          next.text(index === slides.length - 1 ? next.data('done') : next.data('next'));
+        }
+        prev.on('click', function () { go(index - 1); });
+        next.on('click', function () {
+          if (index === slides.length - 1) $modal.modal('hide'); else go(index + 1);
+        });
+        $modal.on('keydown', function (e) {
+          if ($(e.target).is('input')) return;
+          if (e.key === 'ArrowRight') go(index + 1);
+          if (e.key === 'ArrowLeft') go(index - 1);
+        });
+        $modal.on('show.bs.modal', function () {
+          track.classList.add('sw-opds-instant');
+          go(0);
+          track.offsetWidth;
+          track.classList.remove('sw-opds-instant');
+        });
+        $modal.on('shown.bs.modal', function () { next.trigger('focus'); });
+        copy.on('click', function () {
+          var label = copy.find('span'), text = url.val();
+          function done() {
+            copy.addClass('sw-copied');
+            label.text(copy.data('done'));
+            setTimeout(function () { copy.removeClass('sw-copied'); label.text({{ _('Copy')|tojson }}); }, 1800);
+          }
+          // Clipboard API first; if it's missing or blocked, select the address and try the old copy command.
+          function fallback() {
+            url.trigger('focus');
+            try { if (document.execCommand('copy')) done(); } catch (e) {}
+          }
+          if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(done, fallback);
+          else fallback();
+        });
+        url.on('focus click', function () { this.select(); });
       })();
     </script>
     {% block js %}{% endblock %}
