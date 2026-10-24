@@ -123,7 +123,8 @@
   </main>
 </div>
 <script>
-  // The miniature leans toward the pointer: eased with requestAnimationFrame, back to rest when it leaves.
+  // The miniature leans toward the pointer anywhere on the page (so it keeps following over the form),
+  // eased with requestAnimationFrame, back to rest when the pointer leaves the window.
   (function () {
     var hero = document.querySelector('.sw-hero');
     var tilt = document.querySelector('.sw-tilt');
@@ -147,8 +148,15 @@
       frame = moving ? requestAnimationFrame(step) : null;
     }
     function kick() { if (!frame) frame = requestAnimationFrame(step); }
-    hero.addEventListener('pointermove', function (e) {
+    function rest() {
+      target = Object.assign({}, REST);
+      tilt.classList.remove('is-active');
+      kick();
+    }
+    document.addEventListener('pointermove', function (e) {
+      if (e.pointerType !== 'mouse') return;
       var r = tilt.getBoundingClientRect();
+      if (!r.width) return;
       // -1..1 from the preview's centre, softened outside it
       var x = Math.max(-1.4, Math.min(1.4, (e.clientX - (r.left + r.width / 2)) / (r.width / 2)));
       var y = Math.max(-1.4, Math.min(1.4, (e.clientY - (r.top + r.height / 2)) / (r.height / 2)));
@@ -156,11 +164,8 @@
       tilt.classList.add('is-active');
       kick();
     });
-    hero.addEventListener('pointerleave', function () {
-      target = Object.assign({}, REST);
-      tilt.classList.remove('is-active');
-      kick();
-    });
+    document.addEventListener('pointerout', function (e) { if (!e.relatedTarget) rest(); });
+    window.addEventListener('blur', rest);
   })();
 </script>
 {% endblock %}
