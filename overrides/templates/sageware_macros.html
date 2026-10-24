@@ -1,0 +1,25 @@
+{# Sageware theme helpers. Icons come from static/sageware/icons.svg (Lucide 0.548.0, see tools/build_icons.py). #}
+{# Bump on every theme change so browsers drop cached CSS and icons. #}
+{% set version = '2' %}
+
+{% macro icon(name, cls='') -%}
+<svg class="sw-icon {{ cls }}" aria-hidden="true" focusable="false"><use href="{{ url_for('static', filename='sageware/icons.svg') }}?v={{ version }}#{{ name }}"></use></svg>
+{%- endmacro %}
+
+{% set sidebar_icons = {
+  'new': 'book-open', 'hot': 'flame', 'download': 'download', 'rated': 'star', 'read': 'book-check',
+  'unread': 'book-dashed', 'rand': 'shuffle', 'cat': 'tag', 'serie': 'layers', 'author': 'users',
+  'publisher': 'building-2', 'lang': 'languages', 'rate': 'star-half', 'format': 'file-type',
+  'archived': 'archive', 'list': 'table'
+} %}
+{# Sidebar entries that stay visible; the rest sit behind "More". #}
+{% set sidebar_primary = ['new', 'rand', 'author', 'cat'] %}
+
+{# One plain-language role per account, from its Calibre-Web permission flags. #}
+{% macro role_of(user) -%}
+  {%- if user.role_admin() -%}{{ _('Admin') }}
+  {%- elif user.role_edit() or user.role_delete_books() -%}{{ _('Editor') }}
+  {%- elif user.role_upload() -%}{{ _('Contributor') }}
+  {%- elif user.role_download() or user.role_viewer() -%}{{ _('Reader') }}
+  {%- else -%}{{ _('No access') }}{%- endif -%}
+{%- endmacro %}

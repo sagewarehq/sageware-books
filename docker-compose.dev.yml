@@ -1,0 +1,36 @@
+# Local preview: the production image with our overrides mounted on top.
+#   docker compose -f docker-compose.dev.yml up -d
+#   open http://localhost:8083  (admin / admin123 on a fresh dev/config)
+#   Local test accounts: maria (Reader) and sam (Editor), password Dev-Test-<name>-2026!
+# Templates are cached by Flask; restart the container after editing them.
+services:
+  calibre-web:
+    image: lscr.io/linuxserver/calibre-web:0.6.27-ls406
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      TZ: Asia/Manila
+    ports:
+      - "8083:8083"
+    volumes:
+      - ./dev/config:/config
+      - ./dev/library:/books
+      # theme mounts: begin (tools/gen_compose.py)
+      - ./overrides/static/sageware:/app/calibre-web/cps/static/sageware:ro
+      - ./overrides/templates/admin.html:/app/calibre-web/cps/templates/admin.html:ro
+      - ./overrides/templates/config_db.html:/app/calibre-web/cps/templates/config_db.html:ro
+      - ./overrides/templates/config_edit.html:/app/calibre-web/cps/templates/config_edit.html:ro
+      - ./overrides/templates/config_view_edit.html:/app/calibre-web/cps/templates/config_view_edit.html:ro
+      - ./overrides/templates/detail.html:/app/calibre-web/cps/templates/detail.html:ro
+      - ./overrides/templates/email_edit.html:/app/calibre-web/cps/templates/email_edit.html:ro
+      - ./overrides/templates/index.html:/app/calibre-web/cps/templates/index.html:ro
+      - ./overrides/templates/layout.html:/app/calibre-web/cps/templates/layout.html:ro
+      - ./overrides/templates/login.html:/app/calibre-web/cps/templates/login.html:ro
+      - ./overrides/templates/read.html:/app/calibre-web/cps/templates/read.html:ro
+      - ./overrides/templates/sageware_macros.html:/app/calibre-web/cps/templates/sageware_macros.html:ro
+      - ./overrides/templates/schedule_edit.html:/app/calibre-web/cps/templates/schedule_edit.html:ro
+      - ./overrides/templates/search.html:/app/calibre-web/cps/templates/search.html:ro
+      - ./overrides/templates/shelf.html:/app/calibre-web/cps/templates/shelf.html:ro
+      - ./overrides/templates/shelf_order.html:/app/calibre-web/cps/templates/shelf_order.html:ro
+      - ./overrides/templates/user_edit.html:/app/calibre-web/cps/templates/user_edit.html:ro
+      # theme mounts: end

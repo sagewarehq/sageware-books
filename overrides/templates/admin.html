@@ -1,0 +1,322 @@
+{% extends "layout.html" %}
+{% import 'sageware_macros.html' as sw %}
+{# Sageware: the admin overview as cards. Element ids are kept because static/js/main.js binds to them. #}
+{% macro status(value, on=_('On'), off=_('Off')) -%}
+  <span class="sw-status {{ 'sw-status-on' if value else 'sw-status-off' }}">{{ on if value else off }}</span>
+{%- endmacro %}
+{% macro row(label) -%}
+  <div class="sw-kv-row"><dt>{{ label }}</dt><dd>{{ caller() }}</dd></div>
+{%- endmacro %}
+{% block body %}
+<div class="sw-admin">
+  <header class="sw-page-head">
+    <div>
+      <h1>{{_('Admin')}}</h1>
+      <p>{{_('People, library, email and server settings for')}} {{ instance }}.</p>
+    </div>
+  </header>
+
+  {# ---------- People ---------- #}
+  <section class="sw-card sw-card-wide" id="sw-users">
+    <div class="sw-card-head">
+      <div class="sw-card-title">
+        <span class="sw-card-icon">{{ sw.icon('users') }}</span>
+        <div>
+          <h2>{{_('Users')}}</h2>
+          {% set people = namespace(n=0) %}
+          {% for user in allUser %}{% if not user.role_anonymous() %}{% set people.n = people.n + 1 %}{% endif %}{% endfor %}
+          <p>{{ people.n }} {{ _('account') if people.n == 1 else _('accounts') }}</p>
+        </div>
+      </div>
+      <div class="sw-card-actions">
+        {% if not simple %}
+          <a class="btn btn-default btn-sm" id="admin_user_table" href="{{url_for('admin.edit_user_table')}}">{{ sw.icon('table') }} {{_('Edit Users')}}</a>
+        {% endif %}
+        {% if (config.config_login_type == 1) %}
+          <div class="btn btn-default btn-sm" id="import_ldap_users" data-toggle="modal" data-target="#StatusDialog">{{_('Import LDAP Users')}}</div>
+        {% endif %}
+        <a class="btn btn-primary btn-sm" id="admin_new_user" href="{{url_for('admin.new_user')}}">{{ sw.icon('user-plus') }} {{_('Add New User')}}</a>
+      </div>
+    </div>
+    {% if allUser.__len__() < 10 %}
+    {# A permission grid: one row per person, one column per permission, so who-can-do-what reads at a glance. #}
+    {% set perms = [('viewer', _('Read online')), ('download', _('Download'))] %}
+    {% if config.config_uploading %}{% set perms = perms + [('upload', _('Upload'))] %}{% endif %}
+    {% set perms = perms + [('edit', _('Edit')), ('delete', _('Delete')), ('shelves', _('Public shelves'))] %}
+    <div class="sw-people" id="table_user" style="--sw-perm-cols: {{ perms|length }}">
+      <div class="sw-people-head" aria-hidden="true">
+        <span>{{_('Person')}}</span><span>{{_('Role')}}</span>
+        {% for key, label in perms %}<span class="sw-perm-col">{{ label }}</span>{% endfor %}
+        <span></span>
+      </div>
+      {% for user in allUser %}
+        {% if not user.role_anonymous() or config.config_anonbrowse %}
+        {% set has = {'viewer': user.role_viewer(), 'download': user.role_download(), 'upload': user.role_upload(),
+                      'edit': user.role_edit(), 'delete': user.role_delete_books(), 'shelves': user.role_edit_shelfs()} %}
+        <a class="session sw-person" href="{{url_for('admin.edit_user', user_id=user.id)}}" title="{{_('Edit')}} {{ user.name }}">
+          <span class="sw-person-main">
+            <span class="sw-avatar">{{ user.name[:1]|upper }}</span>
+            <span class="sw-user-main">
+              <strong>{{ user.name }}{% if user.role_anonymous() %} <span class="sw-chip">{{_('Guest')}}</span>{% endif %}</strong>
+              <small>{{ user.email or _('No email') }}</small>
+            </span>
+          </span>
+          <span class="sw-person-role"><span class="sw-role sw-role-{{ sw.role_of(user)|lower|replace(' ', '-') }}">{{ sw.role_of(user) }}</span></span>
+          {% for key, label in perms %}
+            <span class="sw-perm-col sw-perm {{ 'on' if user.role_admin() or has[key] else 'off' }}" title="{{ label }}: {{ _('Yes') if user.role_admin() or has[key] else _('No') }}">
+              {% if user.role_admin() or has[key] %}{{ sw.icon('check') }}{% else %}<span class="sw-perm-dash"></span>{% endif %}
+              <span class="sw-perm-label">{{ label }}</span>
+            </span>
+          {% endfor %}
+          <span class="sw-row-chevron">{{ sw.icon('pencil') }}</span>
+        </a>
+        {% endif %}
+      {% endfor %}
+    </div>
+    <p class="sw-card-note sw-people-hint">{{_('Admins can do everything. Select a person to change their role or permissions.')}}</p>
+    {% else %}
+    <p class="sw-card-note">{{ allUser|length }} {{_('accounts')}}. {{_('Use Edit Users to manage them in a table.')}}</p>
+    {% endif %}
+  </section>
+
+  <div class="sw-card-grid">
+    {# ---------- Library ---------- #}
+    <section class="sw-card">
+      <div class="sw-card-head">
+        <div class="sw-card-title">
+          <span class="sw-card-icon">{{ sw.icon('library-big') }}</span>
+          <h2>{{_('Library')}}</h2>
+        </div>
+      </div>
+      <dl class="sw-kv">
+        {% call row(_('Calibre Database Directory')) %}<code>{{ config.config_calibre_dir }}</code>{% endcall %}
+        {% call row(_('Books per Page')) %}{{ config.config_books_per_page }}{% endcall %}
+        {% call row(_('Uploads')) %}{{ status(config.config_uploading) }}{% endcall %}
+      </dl>
+      <div class="sw-card-foot">
+        <a class="btn btn-default btn-sm" id="db_config" href="{{url_for('admin.db_configuration')}}">{{ sw.icon('database') }} {{_('Database')}}</a>
+        <a class="btn btn-default btn-sm" id="view_config" href="{{url_for('admin.view_configuration')}}">{{ sw.icon('palette') }} {{_('Interface')}}</a>
+      </div>
+    </section>
+
+    {# ---------- Access ---------- #}
+    <section class="sw-card">
+      <div class="sw-card-head">
+        <div class="sw-card-title">
+          <span class="sw-card-icon">{{ sw.icon('shield') }}</span>
+          <h2>{{_('Access')}}</h2>
+        </div>
+      </div>
+      <dl class="sw-kv">
+        {% call row(_('Anonymous Browsing')) %}{{ status(config.config_anonbrowse) }}{% endcall %}
+        {% call row(_('Public Registration')) %}{{ status(config.config_public_reg) }}{% endcall %}
+        {% call row(_('Magic Link Remote Login')) %}{{ status(config.config_remote_login) }}{% endcall %}
+        {% call row(_('Reverse Proxy Login')) %}{{ status(config.config_allow_reverse_proxy_header_login) }}{% endcall %}
+        {% if config.config_allow_reverse_proxy_header_login %}
+          {% call row(_('Reverse Proxy Header Name')) %}<code>{{ config.config_reverse_proxy_login_header_name }}</code>{% endcall %}
+          {% call row(_('Reverse Proxy Trusted IPs/CIDRs')) %}<code>{{ config.config_reverse_proxy_trusted_ips }}</code>{% endcall %}
+          {% call row(_('Reverse Proxy Shared Secret Header Name')) %}<code>{{ config.config_reverse_proxy_login_secret_header_name }}</code>{% endcall %}
+          {% call row(_('Reverse Proxy Shared Secret Header')) %}{{ status(config.config_reverse_proxy_use_shared_secret) }}{% endcall %}
+          {% call row(_('Reverse Proxy Shared Secret Configured')) %}{{ status(config.config_reverse_proxy_login_header_secret_e) }}{% endcall %}
+        {% endif %}
+      </dl>
+      <div class="sw-card-foot">
+        <a class="btn btn-default btn-sm" id="basic_config" href="{{url_for('admin.configuration')}}">{{ sw.icon('sliders-horizontal') }} {{_('Edit Basic Configuration')}}</a>
+      </div>
+    </section>
+
+    {# ---------- Email ---------- #}
+    <section class="sw-card">
+      <div class="sw-card-head">
+        <div class="sw-card-title">
+          <span class="sw-card-icon">{{ sw.icon('mail') }}</span>
+          <h2>{{_('Email Server Settings')}}</h2>
+        </div>
+        {{ status(config.get_mail_server_configured(), _('Configured'), _('Not set up')) }}
+      </div>
+      {% if config.get_mail_server_configured() %}
+        <dl class="sw-kv">
+        {% if config.mail_server_type == 0 %}
+          {% call row(_('SMTP Hostname')) %}{{ config.mail_server }}{% endcall %}
+          {% call row(_('SMTP Port')) %}{{ config.mail_port }}{% endcall %}
+          {% call row(_('Encryption')) %}{{ status(config.mail_use_ssl) }}{% endcall %}
+          {% call row(_('SMTP Login')) %}{{ config.mail_login }}{% endcall %}
+          {% call row(_('From Email')) %}{{ config.mail_from }}{% endcall %}
+        {% else %}
+          {% call row(_('Email Service')) %}{{_('Gmail via Oauth2')}}{% endcall %}
+          {% call row(_('From Email')) %}{{ config.mail_gmail_token['email'] }}{% endcall %}
+        {% endif %}
+        </dl>
+      {% else %}
+        <p class="sw-card-note">{{_('Set up an email server to send books to eReaders and to email password resets.')}}</p>
+      {% endif %}
+      <div class="sw-card-foot">
+        <a class="btn btn-default btn-sm emailconfig" id="admin_edit_email" href="{{url_for('admin.edit_mailsettings')}}">{{ sw.icon('pencil') }} {{_('Edit Email Server Settings')}}</a>
+      </div>
+    </section>
+
+    {# ---------- Server ---------- #}
+    <section class="sw-card">
+      <div class="sw-card-head">
+        <div class="sw-card-title">
+          <span class="sw-card-icon">{{ sw.icon('hard-drive') }}</span>
+          <h2>{{_('Server')}}</h2>
+        </div>
+      </div>
+      <dl class="sw-kv">
+        {% call row(_('Port')) %}{{ config.config_port }}{% endcall %}
+        {% if kobo_support and config.config_port != config.config_external_port %}
+          {% call row(_('External Port')) %}{{ config.config_external_port }}{% endcall %}
+        {% endif %}
+        {% call row(_('Log Level')) %}{{ config.get_log_level() }}{% endcall %}
+      </dl>
+      <div class="sw-card-foot">
+        <a class="btn btn-default btn-sm" id="logfile" href="{{url_for('admin.view_logfile')}}">{{ sw.icon('file-text') }} {{_('View Logs')}}</a>
+        <a class="btn btn-default btn-sm" id="debug" href="{{url_for('admin.download_debug')}}">{{ sw.icon('package') }} {{_('Download Debug Package')}}</a>
+      </div>
+    </section>
+
+    {%  if feature_support['scheduler'] %}
+    {# ---------- Scheduled tasks ---------- #}
+    <section class="sw-card scheduled_tasks_details">
+      <div class="sw-card-head">
+        <div class="sw-card-title">
+          <span class="sw-card-icon">{{ sw.icon('clock') }}</span>
+          <h2>{{_('Scheduled Tasks')}}</h2>
+        </div>
+      </div>
+      <dl class="sw-kv">
+        {% call row(_('Start Time')) %}{{ schedule_time }}{% endcall %}
+        {% call row(_('Maximum Duration')) %}{{ schedule_duration }}{% endcall %}
+        {% call row(_('Generate Thumbnails')) %}{{ status(config.schedule_generate_book_covers) }}{% endcall %}
+        {% call row(_('Reconnect Calibre Database')) %}{{ status(config.schedule_reconnect) }}{% endcall %}
+        {% call row(_('Generate Metadata Backup Files')) %}{{ status(config.schedule_metadata_backup) }}{% endcall %}
+      </dl>
+      <div class="sw-card-foot">
+        <a class="btn btn-default btn-sm scheduledtasks" id="admin_edit_scheduled_tasks" href="{{url_for('admin.edit_scheduledtasks')}}">{{ sw.icon('pencil') }} {{_('Edit Scheduled Tasks Settings')}}</a>
+        {% if config.schedule_generate_book_covers %}
+          <a class="btn btn-default btn-sm" id="admin_refresh_cover_cache">{{ sw.icon('refresh-cw') }} {{_('Refresh Thumbnail Cache')}}</a>
+        {%  endif %}
+      </div>
+    </section>
+    {%  endif %}
+
+    {# ---------- Version ---------- #}
+    <section class="sw-card">
+      <div class="sw-card-head">
+        <div class="sw-card-title">
+          <span class="sw-card-icon">{{ sw.icon('arrow-up-circle') }}</span>
+          <h2>{{_('Version Information')}}</h2>
+        </div>
+      </div>
+      <table class="table sw-version-table" id="update_table">
+        <thead>
+          <tr>
+            <th>{{_('Version')}}</th>
+            <th>{{_('Details')}}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr id="current_version">
+            <td>{{commit}}</td>
+            <td><span class="sw-status sw-status-on">{{_('Current Version')}}</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      {%  if feature_support['updater'] %}
+      <div class="sw-card-foot">
+        <div class="hidden" id="update_error"> <span>{{update_error}}</span></div>
+        <div class="btn btn-default btn-sm" id="check_for_update">{{ sw.icon('refresh-cw') }} {{_('Check for Update')}}</div>
+        <div class="btn btn-primary btn-sm hidden" id="perform_update" data-toggle="modal" data-target="#StatusDialog">{{_('Perform Update')}}</div>
+      </div>
+      {%  endif %}
+    </section>
+  </div>
+
+  {# ---------- Maintenance ---------- #}
+  <section class="sw-card sw-card-wide sw-card-danger">
+    <div class="sw-card-head">
+      <div class="sw-card-title">
+        <span class="sw-card-icon">{{ sw.icon('power') }}</span>
+        <div>
+          <h2>{{_('Administration')}}</h2>
+          <p>{{_('These act on the running server.')}}</p>
+        </div>
+      </div>
+    </div>
+    <div class="sw-actions-list">
+      <div class="sw-action">
+        <div><strong>{{_('Reconnect Calibre Database')}}</strong><small>{{_('Reload the library after changing it outside Calibre-Web.')}}</small></div>
+        <div class="btn btn-default btn-sm" id="restart_database" data-toggle="modal" data-target="#StatusDialog">{{ sw.icon('database') }} {{_('Reconnect')}}</div>
+      </div>
+      {% if config.schedule_metadata_backup %}
+      <div class="sw-action">
+        <div><strong>{{_('Queue all books for metadata backup')}}</strong><small>{{_('Writes metadata.opf files next to every book.')}}</small></div>
+        <div class="btn btn-default btn-sm" id="metadata_backup" data-toggle="modal" data-target="#StatusDialog">{{ sw.icon('archive') }} {{_('Queue')}}</div>
+      </div>
+      {%  endif %}
+      <div class="sw-action">
+        <div><strong>{{_('Restart')}}</strong><small>{{_('Readers are disconnected for a few seconds.')}}</small></div>
+        <div class="btn btn-default btn-sm" id="admin_restart" data-toggle="modal" data-target="#RestartDialog">{{ sw.icon('rotate-ccw') }} {{_('Restart')}}</div>
+      </div>
+      <div class="sw-action">
+        <div><strong>{{_('Shutdown')}}</strong><small>{{_('Stops the server until it is started again.')}}</small></div>
+        <div class="btn btn-danger btn-sm" id="admin_stop" data-toggle="modal" data-target="#ShutdownDialog">{{ sw.icon('power') }} {{_('Shutdown')}}</div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- Modal -->
+<div id="RestartDialog" class="modal fade" role="dialog">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-body text-center">
+        <p class="sw-modal-title">{{_('Are you sure you want to restart?')}}</p>
+          <div id="spinner" class="spinner"  style="display:none;">
+                <img id="img-spinner" src="{{ url_for('static', filename='css/libs/images/loading-icon.gif') }}"/>
+          </div>
+        <div class="sw-modal-actions">
+          <button type="button" class="btn btn-default" data-dismiss="modal">{{_('Cancel')}}</button>
+          <button type="button" class="btn btn-primary" id="restart" >{{_('Restart')}}</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="ShutdownDialog" class="modal fade" role="dialog">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-body text-center">
+        <p class="sw-modal-title">{{_('Are you sure you want to shutdown?')}}</p>
+        <div class="sw-modal-actions">
+          <button type="button" class="btn btn-default" data-dismiss="modal">{{_('Cancel')}}</button>
+          <button type="button" class="btn btn-danger" id="shutdown" data-dismiss="modal">{{_('Shutdown')}}</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="StatusDialog" class="modal fade" role="dialog">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+      <span id="DialogHeader">{{_('Updating, please do not reload this page')}}</span>
+      </div>
+      <div class="modal-body text-center">
+          <div id="spinner2" class="spinner2"  style="display:none;">
+                <img id="img-spinner2" src="{{ url_for('static', filename='css/libs/images/loading-icon.gif') }}"/>
+          </div>
+         <div id="DialogContent"></div>
+        <div class="sw-modal-actions">
+          <button type="button" class="btn btn-primary hidden" id="DialogFinished" data-dismiss="modal">{{_('OK')}}</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block modal %}
+{{ change_confirm_modal() }}
+{% endblock %}

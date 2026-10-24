@@ -1,0 +1,7 @@
+dev/config/
+dev/library/
+dev/epubs/
+dev/metadata_sqlite.sql
+__pycache__/
+.DS_Store
+.claude/

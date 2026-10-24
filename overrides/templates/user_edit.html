@@ -1,0 +1,291 @@
+{% extends "layout.html" %}
+{% import 'sageware_macros.html' as sw %}
+{#
+  Sageware: profile (/me), add user and edit user as cards with a sticky save bar.
+  Field names/ids are unchanged; main.js binds #user_submit, #btndeluser, #back, #kobo_full_sync,
+  #config_*_kobo_token and data-control="edit_settings"; password.js reads #password's data-* attributes.
+#}
+{% macro setting(name, label, checked, hint='', control='') -%}
+  <label class="sw-setting" for="{{ name }}">
+    <span><strong>{{ label }}</strong>{% if hint %}<small>{{ hint }}</small>{% endif %}</span>
+    <input type="checkbox" class="sw-switch-input" name="{{ name }}" id="{{ name }}" {% if control %}data-control="{{ control }}"{% endif %} {% if checked %}checked{% endif %}>
+  </label>
+{%- endmacro %}
+{% block body %}
+<div class="sw-settings">
+  {% if not profile %}
+    <a class="sw-crumb" href="{{ url_for('admin.admin') }}">{{ sw.icon('chevron-left') }} {{_('Admin')}}</a>
+  {% endif %}
+  <header class="sw-page-head">
+    {% if new_user %}
+      <div>
+        <h1>{{_('Add New User')}}</h1>
+        <p>{{_('Create an account and choose what it can do.')}}</p>
+      </div>
+    {% else %}
+      <div class="sw-profile-head">
+        <span class="sw-avatar">{{ (content.name or '?')[:1]|upper }}</span>
+        <div>
+          <h1>{{ content.name }}</h1>
+          <p>{% if profile %}{{_('Your account and reading preferences.')}}{% else %}{{ content.email or _('No email') }}{% endif %}</p>
+        </div>
+      </div>
+    {% endif %}
+  </header>
+
+  <form role="form" method="POST" autocomplete="off">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    {# ---------- Account ---------- #}
+    <section class="sw-card sw-form-card">
+      <div class="sw-card-head">
+        <div class="sw-card-title"><span class="sw-card-icon">{{ sw.icon('circle-user') }}</span><h2>{{_('Account')}}</h2></div>
+        {% if current_user and current_user.role_admin() and not new_user and not profile and ( mail_configured and content.email if content.email != None ) and not content.role_anonymous() %}
+          <a class="btn btn-default btn-sm postAction" id="resend_password" role="button" data-action="{{url_for('admin.reset_user_password', user_id = content.id) }}">{{ sw.icon('mail') }} {{_('Reset user Password')}}</a>
+        {% endif %}
+      </div>
+      <div class="sw-field-grid">
+        {% if new_user or ( current_user and content.name != "Guest" and current_user.role_admin() ) %}
+        <div class="form-group required">
+          <label for="name">{{_('Username')}}</label>
+          <input type="text" class="form-control" name="name" id="name" value="{{ content.name if content.name != None }}" autocomplete="off">
+        </div>
+        {% endif %}
+        <div class="form-group">
+          <label for="email">{{_('Email')}}</label>
+          <input type="email" class="form-control" name="email" id="email" value="{{ content.email if content.email != None }}" autocomplete="off">
+        </div>
+        {% if ( current_user and current_user.role_passwd() or current_user.role_admin() ) and not content.role_anonymous() %}
+        <div class="form-group sw-span-2">
+          <label for="password">{% if new_user %}{{_('Password')}}{% else %}{{_('New password')}}{% endif %}</label>
+          <input type="password" class="form-control" name="password" id="password" placeholder="{% if not new_user %}{{_('Leave empty to keep the current one')}}{% endif %}" data-lang="{{ current_user.locale }}" data-verify="{{ config.config_password_policy }}" {% if config.config_password_policy %} data-min={{ config.config_password_min_length }} data-word={{ config.config_password_character }} data-special={{ config.config_password_special }} data-upper={{ config.config_password_upper }} data-lower={{ config.config_password_lower }} data-number={{ config.config_password_number }}{% endif %} value="" autocomplete="new-password">
+        </div>
+        {% endif %}
+      </div>
+    </section>
+
+    {# ---------- Preferences ---------- #}
+    <section class="sw-card sw-form-card">
+      <div class="sw-card-head">
+        <div class="sw-card-title"><span class="sw-card-icon">{{ sw.icon('sliders-horizontal') }}</span><h2>{{_('Preferences')}}</h2></div>
+      </div>
+      <div class="sw-field-grid">
+        {% if not content.role_anonymous() %}
+        <div class="form-group">
+          <label for="locale">{{_('Language')}}</label>
+          <select name="locale" id="locale" class="form-control">
+            {% for translation in translations %}
+              <option value="{{translation}}" {% if translation|string == content.locale %}selected{% endif %}>{{ translation.display_name|capitalize }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        {% endif %}
+        <div class="form-group">
+          <label for="default_language">{{_('Language of Books')}}</label>
+          <select name="default_language" id="default_language" class="form-control">
+            <option value="all" {% if content.default_language == "all" %}selected{% endif %}>{{ _('Show All') }}</option>
+            {% for language in languages %}
+              <option value="{{ language.lang_code }}" {% if content.default_language == language.lang_code %}selected{% endif %}>{{ language.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group sw-span-2">
+          <label for="kindle_mail">{{_('Send to eReader Email Address')}}</label>
+          <input type="email" class="form-control" name="kindle_mail" id="kindle_mail" value="{{ content.kindle_mail if content.kindle_mail != None }}" placeholder="name@kindle.com">
+          <p class="help-block">{{_('Use a comma to separate addresses for more than one eReader.')}}</p>
+        </div>
+      </div>
+    </section>
+
+    {# ---------- Sidebar & views ---------- #}
+    <section class="sw-card sw-form-card">
+      <div class="sw-card-head">
+        <div class="sw-card-title">
+          <span class="sw-card-icon">{{ sw.icon('layers') }}</span>
+          <div><h2>{{_('Sidebar & views')}}</h2><p>{{_('Choose what shows up when browsing.')}}</p></div>
+        </div>
+      </div>
+      <div class="sw-switch-cols">
+        {% for element in sidebar %}
+          {% if element['config_show'] %}
+            {{ setting('show_' ~ element['visibility'], element['show_text'], content.check_visibility(element['visibility'])) }}
+          {% endif %}
+        {% endfor %}
+        {{ setting('Show_detail_random', _('Show Random Books in Detail View'), content.show_detail_random()) }}
+      </div>
+    </section>
+
+    {# ---------- Permissions (admins editing someone else) ---------- #}
+    {% if current_user and current_user.role_admin() and not profile %}
+    <section class="sw-card sw-form-card">
+      <div class="sw-card-head">
+        <div class="sw-card-title">
+          <span class="sw-card-icon">{{ sw.icon('shield') }}</span>
+          <div><h2>{{_('Permissions')}}</h2><p>{{_('Pick a role, or fine-tune the switches below.')}}</p></div>
+        </div>
+      </div>
+      {# Presets only flip the switches below; the form still submits the individual permissions. #}
+      <div class="sw-roles-picker" role="radiogroup" aria-label="{{_('Role')}}">
+        <button type="button" data-role="reader"><strong>{{_('Reader')}}</strong><small>{{_('Read and download')}}</small></button>
+        {% if config.config_uploading %}<button type="button" data-role="contributor"><strong>{{_('Contributor')}}</strong><small>{{_('+ upload books')}}</small></button>{% endif %}
+        <button type="button" data-role="editor"><strong>{{_('Editor')}}</strong><small>{{_('+ edit, delete, shelves')}}</small></button>
+        {% if not content.role_anonymous() %}<button type="button" data-role="admin"><strong>{{_('Admin')}}</strong><small>{{_('Everything')}}</small></button>{% endif %}
+      </div>
+      <p class="sw-roles-custom" hidden>{{ sw.icon('sliders-horizontal') }} {{_('Custom permissions')}}</p>
+      <div class="sw-setting-list">
+        {% if not content.role_anonymous() %}
+          {{ setting('admin_role', _('Admin User'), content.role_admin(), _('Full access, including these settings.')) }}
+        {% endif %}
+        {{ setting('download_role', _('Allow Downloads'), content.role_download()) }}
+        {{ setting('viewer_role', _('Allow eBook Viewer'), content.role_viewer(), _('Read books in the browser.')) }}
+        {% if config.config_uploading %}
+          {{ setting('upload_role', _('Allow Uploads'), content.role_upload()) }}
+        {% endif %}
+        {{ setting('edit_role', _('Allow Edit'), content.role_edit(), _('Edit book metadata.'), 'edit_settings') }}
+      </div>
+      <div class="sw-setting-list" data-related="edit_settings">
+        {{ setting('delete_role', _('Allow Delete Books'), content.role_delete_books()) }}
+      </div>
+      {% if not content.role_anonymous() %}
+      <div class="sw-setting-list">
+        {{ setting('passwd_role', _('Allow Changing Password'), content.role_passwd()) }}
+        {{ setting('edit_shelf_role', _('Allow Editing Public Shelves'), content.role_edit_shelfs()) }}
+      </div>
+      {% endif %}
+      {% if not new_user and not simple %}
+      <div class="sw-card-foot">
+        <a href="#" id="get_user_tags" class="btn btn-default btn-sm" data-id="{{content.id}}" data-toggle="modal" data-target="#restrictModal">{{ sw.icon('tag') }} {{_('Add Allowed/Denied Tags')}}</a>
+        <a href="#" id="get_user_column_values" data-id="{{content.id}}" class="btn btn-default btn-sm" data-toggle="modal" data-target="#restrictModal">{{ sw.icon('table') }} {{_('Add allowed/Denied Custom Column Values')}}</a>
+      </div>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    {# ---------- Kobo ---------- #}
+    {% if kobo_support and not new_user %}
+    <section class="sw-card sw-form-card">
+      <div class="sw-card-head">
+        <div class="sw-card-title"><span class="sw-card-icon">{{ sw.icon('refresh-cw') }}</span><h2>{{ _('Kobo Sync Token')}}</h2></div>
+      </div>
+      {% if not content.role_anonymous() and not simple %}
+        <div class="sw-setting-list">
+          {{ setting('kobo_only_shelves_sync', _('Sync only books in selected shelves with Kobo'), content.kobo_only_shelves_sync) }}
+        </div>
+      {% endif %}
+      <div class="sw-card-foot">
+        <a class="btn btn-default btn-sm" id="config_create_kobo_token" data-toggle="modal" data-target="#modal_kobo_token" data-remote="false" href="{{ url_for('kobo_auth.generate_auth_token', user_id=content.id) }}">{{_('Create/View')}}</a>
+        <div class="btn btn-default btn-sm" id="kobo_full_sync" data-value="{% if current_user.role_admin() %}{{ content.id }}{% else %}0{% endif %}" {% if not content.remote_auth_token.first() %} style="display: none;" {% endif %}>{{_('Force full kobo sync')}}</div>
+        <div class="btn btn-danger btn-sm" id="config_delete_kobo_token" data-value="{{ content.id }}" data-remote="false" {% if not content.remote_auth_token.first() %} style="display: none;" {% endif %}>{{_('Delete')}}</div>
+      </div>
+    </section>
+    {% endif %}
+
+    {# ---------- Linked accounts ---------- #}
+    {% if registered_oauth.keys()| length > 0 and not new_user and profile %}
+    <section class="sw-card sw-form-card">
+      <div class="sw-card-head">
+        <div class="sw-card-title"><span class="sw-card-icon">{{ sw.icon('link') }}</span><h2>{{_('Linked accounts')}}</h2></div>
+      </div>
+      <div class="sw-actions-list sw-actions-flush">
+        {% for id, name in registered_oauth.items() %}
+          <div class="sw-action">
+            <div><strong>{{ name }}</strong><small>{{ _('Linked') if id in oauth_status else _('Not linked') }}</small></div>
+            {% if id not in oauth_status %}
+              <a href="{{ url_for('oauth.'+ name +'_login') }}" id="config_{{ id }}_oauth" class="btn btn-default btn-sm">{{_('Link')}}</a>
+            {% else %}
+              <a href="{{ url_for('oauth.'+ name +'_login_unlink') }}" id="config_{{ id }}_oauth" class="btn btn-default btn-sm">{{_('Unlink')}}</a>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    {# ---------- Danger zone ---------- #}
+    {% if current_user and current_user.role_admin() and not profile and not new_user and not content.role_anonymous() %}
+    <section class="sw-card sw-form-card sw-card-danger">
+      <div class="sw-action sw-action-solo">
+        <div><strong>{{_('Delete User')}}</strong><small>{{_('Removes the account and its shelves. Books stay in the library.')}}</small></div>
+        <div class="btn btn-danger btn-sm" id="btndeluser" data-value="{{ content.id }}" data-remote="false">{{ sw.icon('x') }} {{_('Delete User')}}</div>
+      </div>
+    </section>
+    {% endif %}
+
+    <div class="sw-form-actions">
+      {% if not profile %}
+        <div class="btn btn-default" data-back="{{ url_for('admin.admin') }}" id="back">{{_('Cancel')}}</div>
+      {% endif %}
+      <button type="button" id="user_submit" class="btn btn-primary">{% if new_user %}{{_('Create user')}}{% else %}{{_('Save')}}{% endif %}</button>
+    </div>
+  </form>
+</div>
+
+<div class="modal fade" id="modal_kobo_token" tabindex="-1" role="dialog" aria-labelledby="kobo_tokenModalLabel">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="kobo_tokenModalLabel">{{_('Generate Kobo Auth URL')}}</h4>
+      </div>
+      <div class="modal-body">...</div>
+      <div class="modal-footer">
+        <button type="button" id="kobo_close" class="btn btn-default" data-dismiss="modal">{{_('Close')}}</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block modal %}
+{{ restrict_modal() }}
+{{ delete_confirm_modal() }}
+{% endblock %}
+{% block js %}
+<script src="{{ url_for('static', filename='js/libs/bootstrap-table/bootstrap-table.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/libs/bootstrap-table/bootstrap-table-editable.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/libs/bootstrap-table/bootstrap-editable.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/libs/pwstrength/i18next.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/libs/pwstrength/i18nextHttpBackend.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/libs/pwstrength/pwstrength-bootstrap.js') }}"></script>
+<script src="{{ url_for('static', filename='js/password.js') }}"></script>
+<script src="{{ url_for('static', filename='js/table.js') }}"></script>
+<script>
+  // Role presets for the permission switches; highlights the matching role or "Custom".
+  (function () {
+    var picker = document.querySelector('.sw-roles-picker');
+    if (!picker) return;
+    var ids = ['admin_role', 'download_role', 'viewer_role', 'upload_role', 'edit_role', 'delete_role', 'edit_shelf_role'];
+    var ROLES = {
+      reader:      { viewer_role: 1, download_role: 1 },
+      contributor: { viewer_role: 1, download_role: 1, upload_role: 1 },
+      editor:      { viewer_role: 1, download_role: 1, upload_role: 1, edit_role: 1, delete_role: 1, edit_shelf_role: 1 },
+      admin:       { admin_role: 1, viewer_role: 1, download_role: 1, upload_role: 1, edit_role: 1, delete_role: 1, edit_shelf_role: 1 }
+    };
+    var boxes = ids.map(function (id) { return document.getElementById(id); }).filter(Boolean);
+    function matches(role) {
+      return boxes.every(function (b) { return !!ROLES[role][b.id] === b.checked; });
+    }
+    function refresh() {
+      var found = null;
+      picker.querySelectorAll('button').forEach(function (btn) {
+        var on = !found && matches(btn.dataset.role);
+        if (on) found = btn.dataset.role;
+        btn.classList.toggle('active', on);
+        btn.setAttribute('aria-checked', on ? 'true' : 'false');
+      });
+      document.querySelector('.sw-roles-custom').hidden = !!found;
+    }
+    picker.addEventListener('click', function (e) {
+      var btn = e.target.closest('button[data-role]');
+      if (!btn) return;
+      boxes.forEach(function (b) {
+        b.checked = !!ROLES[btn.dataset.role][b.id];
+        b.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+      if (window.jQuery) jQuery('#edit_role').trigger('change');
+      refresh();
+    });
+    boxes.forEach(function (b) { b.addEventListener('change', refresh); });
+    refresh();
+  })();
+</script>
+{% endblock %}

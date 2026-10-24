@@ -1,0 +1,75 @@
+# Production: books.sageware.io on Dokploy (project "books"), deployed from this repo.
+# The stock linuxserver Calibre-Web image runs with the Sageware theme (overrides/) bind-mounted on top.
+#
+# Secrets come from Dokploy's Environment tab (written to .env): ADMIN_PASSWORD_HASH, LIBRARY_SEED.
+# Both are only read on a first-ever start (empty volumes).
+#
+# Never change the volume names below: they hold the library and app.db. A deploy with "Fresh Volumes"
+# or new names would start an empty library.
+services:
+  bootstrap:
+    image: lscr.io/linuxserver/calibre-web:0.6.27-ls406
+    entrypoint: ["python3", "/init/init_books.py"]
+    environment:
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH}
+      LIBRARY_SEED: ${LIBRARY_SEED}
+      LIBRARY_SEED_SHA256: fac2f7e37ef4bc0fb2955e9a3f612604707d4ef573af5c28bd7a8369339f4bd4
+    volumes:
+      - books_config:/config
+      - books_library:/books
+      - ./bootstrap:/init:ro
+    restart: "no"
+    mem_limit: 512m
+
+  calibre-web:
+    image: lscr.io/linuxserver/calibre-web:0.6.27-ls406
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      TZ: Asia/Manila
+    volumes:
+      - books_config:/config
+      - books_library:/books
+      # theme mounts: begin (tools/gen_compose.py)
+      - ./overrides/static/sageware:/app/calibre-web/cps/static/sageware:ro
+      - ./overrides/templates/admin.html:/app/calibre-web/cps/templates/admin.html:ro
+      - ./overrides/templates/config_db.html:/app/calibre-web/cps/templates/config_db.html:ro
+      - ./overrides/templates/config_edit.html:/app/calibre-web/cps/templates/config_edit.html:ro
+      - ./overrides/templates/config_view_edit.html:/app/calibre-web/cps/templates/config_view_edit.html:ro
+      - ./overrides/templates/detail.html:/app/calibre-web/cps/templates/detail.html:ro
+      - ./overrides/templates/email_edit.html:/app/calibre-web/cps/templates/email_edit.html:ro
+      - ./overrides/templates/index.html:/app/calibre-web/cps/templates/index.html:ro
+      - ./overrides/templates/layout.html:/app/calibre-web/cps/templates/layout.html:ro
+      - ./overrides/templates/login.html:/app/calibre-web/cps/templates/login.html:ro
+      - ./overrides/templates/read.html:/app/calibre-web/cps/templates/read.html:ro
+      - ./overrides/templates/sageware_macros.html:/app/calibre-web/cps/templates/sageware_macros.html:ro
+      - ./overrides/templates/schedule_edit.html:/app/calibre-web/cps/templates/schedule_edit.html:ro
+      - ./overrides/templates/search.html:/app/calibre-web/cps/templates/search.html:ro
+      - ./overrides/templates/shelf.html:/app/calibre-web/cps/templates/shelf.html:ro
+      - ./overrides/templates/shelf_order.html:/app/calibre-web/cps/templates/shelf_order.html:ro
+      - ./overrides/templates/user_edit.html:/app/calibre-web/cps/templates/user_edit.html:ro
+      # theme mounts: end
+    networks:
+      - default
+      - dokploy-network
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8083/login"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+    mem_limit: 512m
+
+networks:
+  dokploy-network:
+    external: true
+
+volumes:
+  books_config:
+    name: sageware_books_config
+  books_library:
+    name: sageware_books_library

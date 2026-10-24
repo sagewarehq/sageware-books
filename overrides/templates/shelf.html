@@ -1,0 +1,232 @@
+{% import 'image.html' as image %}
+{% import 'sageware_macros.html' as sw %}
+{% extends "layout.html" %}
+{% block body %}
+<div class="discover sw-shelf">
+  {#
+    Sageware: shelf header with one Sort menu (first option "Custom order" = the stock manual-order mode)
+    and a "⋯" menu for rare actions. Ids kept for main.js: #delete_shelf, #edit_shelf, #order_shelf, #shelf_down.
+  #}
+  {% set can_edit = current_user.is_authenticated and ((current_user.role_edit_shelfs() and shelf.is_public) or not shelf.is_public) %}
+  {% set manual = status == 'on' %}
+  <div class="sw-section-head">
+    <div>
+      <h2>{{ shelf.name }}</h2>
+      <p class="sw-section-sub">
+        {{ entries|length }} {{ _('book') if entries|length == 1 else _('books') }}
+        {% if can_edit and entries.__len__() > 1 %}<span class="sw-dot">·</span><span class="sw-drag-hint">{{ sw.icon('grip-vertical') }} {{ _('Hold a cover and drag to reorder') }}</span>{% endif %}
+        <span class="sw-dot">·</span>
+        {% if shelf.is_public %}{{ sw.icon('globe') }} {{ _('Public') }}{% else %}{{ sw.icon('lock') }} {{ _('Private') }}{% endif %}
+      </p>
+    </div>
+    <div class="sw-section-actions">
+      {% if can_edit %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endif %}
+      {% if entries.__len__() and can_edit %}
+        {% set sorts = [('new', 'new', _('Recently added to library')), ('old', 'old', _('Oldest in library')),
+                        ('shelf_new', 'shelfnew', _('Recently added to shelf')), ('shelf_old', 'shelfold', _('First added to shelf')),
+                        ('asc', 'abc', _('Title A–Z')), ('desc', 'zyx', _('Title Z–A')),
+                        ('auth_az', 'authaz', _('Author A–Z')), ('auth_za', 'authza', _('Author Z–A')),
+                        ('pub_new', 'pubnew', _('Newest published')), ('pub_old', 'pubold', _('Oldest published'))] %}
+        {% set current = (sorts|selectattr(1, 'equalto', order)|first) %}
+        <div class="filterheader sw-sort dropdown" data-manual="{{ 'on' if manual else 'off' }}">
+          <button type="button" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <span class="sw-sort-label">{{_('Sort')}}:</span> {{ _('Custom order') if manual or not current else current[2] }} {{ sw.icon('chevron-down') }}
+          </button>
+          <ul class="dropdown-menu dropdown-menu-right">
+            <li {% if manual %}class="active"{% endif %}><a href="#" class="sw-shelf-manual" data-href="{{ url_for('shelf.show_shelf', shelf_id=shelf.id) }}">{{ _('Custom order') }}{% if manual %} {{ sw.icon('check') }}{% endif %}</a></li>
+            <li role="separator" class="divider"></li>
+            {% for sort_id, sort_param, label in sorts %}
+              <li {% if not manual and order == sort_param %}class="active"{% endif %}><a id="{{ sort_id }}" class="sw-shelf-sort" href="{{url_for('shelf.show_shelf', shelf_id=shelf.id, sort_param=sort_param)}}">{{ label }}{% if not manual and order == sort_param %} {{ sw.icon('check') }}{% endif %}</a></li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+      {% if can_edit or current_user.role_download() %}
+        <div class="dropdown">
+          <button type="button" class="btn btn-default btn-sm sw-btn-square dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" title="{{ _('More') }}">{{ sw.icon('ellipsis') }}<span class="sr-only">{{ _('More') }}</span></button>
+          <ul class="dropdown-menu dropdown-menu-right">
+            {% if can_edit and entries.__len__() %}
+              <li><a id="order_shelf" href="{{ url_for('shelf.order_shelf', shelf_id=shelf.id) }}">{{ sw.icon('arrow-up-down') }} {{ _('Arrange books manually') }}</a></li>
+            {% endif %}
+            {% if current_user.role_download() and entries.__len__() %}
+              <li><a id="shelf_down" href="{{ url_for('shelf.show_simpleshelf', shelf_id=shelf.id) }}">{{ sw.icon('download') }} {{ _('Download') }}</a></li>
+            {% endif %}
+            {% if can_edit %}
+              <li><a id="edit_shelf" href="{{ url_for('shelf.edit_shelf', shelf_id=shelf.id) }}">{{ sw.icon('pencil') }} {{ _('Edit Shelf Properties') }}</a></li>
+              <li role="separator" class="divider"></li>
+              <li><a href="#" class="sw-menu-danger" data-action="{{url_for('shelf.delete_shelf', shelf_id=shelf.id)}}" id="delete_shelf" data-value="{{ shelf.id }}">{{ sw.icon('trash-2') }} {{ _('Delete this Shelf') }}</a></li>
+            {% endif %}
+          </ul>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+  {% if not entries.__len__() %}
+    <div class="sw-empty">
+      {{ sw.icon('bookmark') }}
+      <h2>{{ _('This shelf is empty') }}</h2>
+      <p>{{ _('Open any book and use “Add to shelf” to put it here.') }}</p>
+    </div>
+  {% endif %}
+  {# Editors reorder by dragging covers; the grid then saves to shelf.order_shelf and switches to custom order. #}
+  <div class="row display-flex{% if can_edit and entries.__len__() > 1 %} sw-shelf-grid{% endif %}"{% if can_edit and entries.__len__() > 1 %} data-order-url="{{ url_for('shelf.order_shelf', shelf_id=shelf.id) }}" data-view-url="{{ url_for('web.update_view') }}"{% endif %}>
+    {% for entry in entries %}
+    <div class="col-sm-3 col-lg-2 col-xs-6 book session">
+      <div class="cover">
+            <a href="{{ url_for('web.show_book', book_id=entry.Books.id) }}" {% if simple==false %}data-toggle="modal" data-target="#bookDetailsModal" data-remote="false"{% endif %}>
+              <span class="img" title="{{entry.Books.title}}" >
+                {{ image.book_cover(entry.Books) }}
+                {% if entry[2] == True %}<span class="badge read glyphicon glyphicon-ok"></span>{% endif %}
+              </span>
+            </a>
+      </div>
+      <div class="meta">
+        <a href="{{ url_for('web.show_book', book_id=entry.Books.id) }}" {% if simple==false %}data-toggle="modal" data-target="#bookDetailsModal" data-remote="false"{% endif %}>
+          <p title="{{entry.Books.title}}" class="title">{{entry.Books.title|shortentitle}}</p>
+        </a>
+        <p class="author">
+          {% for author in entry.Books.authors %}
+            {% if loop.index > g.config_authors_max and g.config_authors_max != 0 %}
+              {% if not loop.first %}
+                <span class="author-hidden-divider">&amp;</span>
+			  {% endif %}
+              <a class="author-name author-hidden" href="{{url_for('web.books_list',  data='author', sort_param='stored', book_id=author.id) }}">{{author.name.replace('|',',')|shortentitle(30)}}</a>
+              {% if loop.last %}
+                <a href="#" class="author-expand" data-authors-max="{{g.config_authors_max}}" data-collapse-caption="({{_('reduce')}})">(...)</a>
+              {% endif %}
+            {% else %}
+              {% if not loop.first %}
+                <span>&amp;</span>
+              {% endif %}
+              <a class="author-name" href="{{url_for('web.books_list',  data='author', sort_param='stored', book_id=author.id) }}">{{author.name.replace('|',',')|shortentitle(30)}}</a>
+            {% endif %}
+          {% endfor %}
+        </p>
+        {% if entry.Books.series.__len__() > 0 %}
+        <p class="series">
+          <a href="{{url_for('web.books_list', data='series', sort_param='stored', book_id=entry.Books.series[0].id )}}">
+            {{entry.Books.series[0].name}}
+          </a>
+          ({{entry.Books.series_index|formatfloat(2)}})
+        </p>
+        {% endif %}
+        {% if entry.Books.ratings.__len__() > 0 %}
+        <div class="rating">
+          {% for number in range((entry.Books.ratings[0].rating/2)|int(2)) %}
+            <span class="glyphicon glyphicon-star good"></span>
+            {% if loop.last and loop.index < 5 %}
+              {% for numer in range(5 - loop.index) %}
+                <span class="glyphicon glyphicon-star-empty"></span>
+              {% endfor %}
+            {% endif %}
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+<script>
+  // jQuery loads at the end of the page, so wait for it.
+  document.addEventListener('DOMContentLoaded', function () {
+    function setManual(on) {
+      return $.ajax({ method: 'post', contentType: 'application/json; charset=utf-8', dataType: 'json',
+                      url: {{ url_for('web.update_view')|tojson }}, data: JSON.stringify({ shelf: { man: on ? 'on' : 'off' } }) });
+    }
+    var manual = $('.sw-sort').data('manual') === 'on';
+    $('.sw-shelf-manual').on('click', function (e) {
+      e.preventDefault();
+      var href = $(this).data('href');
+      if (manual) return;
+      setManual(true).always(function () { location.href = href; });
+    });
+    $('.sw-shelf-sort').on('click', function (e) {
+      if (!manual) return;
+      e.preventDefault();
+      var href = this.href;
+      setManual(false).always(function () { location.href = href; });
+    });
+  });
+</script>
+{% endblock %}
+{% block js %}
+<script src="{{ url_for('static', filename='js/libs/Sortable.min.js') }}"></script>
+<script>
+  // Drag to reorder on the shelf grid. Press and hold a cover: it lifts and follows the pointer (.sw-drag-float),
+  // its old place becomes an empty dashed slot (.sw-drag-slot) that moves with you, and the others make room.
+  $(function () {
+    var grid = document.querySelector('.sw-shelf-grid');
+    if (!grid || !window.Sortable) return;
+    // main.js lays the grid out with Isotope (absolute positions), which fights dragging; use plain CSS grid here.
+    setTimeout(function () {
+      var $grid = $(grid);
+      if ($grid.data('isotope')) $grid.isotope('destroy');
+      grid.removeAttribute('style');
+      grid.querySelectorAll('.book').forEach(function (b) { b.removeAttribute('style'); });
+      grid.classList.add('sw-grid-ready');
+    }, 0);
+
+    var csrf = $("input[name='csrf_token']").val();
+    var dragged = false;
+    function bookId(el) {
+      var a = el.querySelector('.cover a');
+      var m = a && a.getAttribute('href').match(/\/book\/(\d+)/);
+      return m && m[1];
+    }
+    function toast(text) {
+      $('.sw-shelf-toast').remove();
+      var $t = $('<div class="row-fluid text-center sw-shelf-toast"><div class="alert alert-success"></div></div>');
+      $t.find('.alert').text(text);
+      $('.navbar').after($t);
+    }
+    Sortable.create(grid, {
+      draggable: '.book',
+      animation: 220,
+      easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
+      delay: 160,                 // hold to pick up; a quick click still opens the book
+      delayOnTouchOnly: false,
+      touchStartThreshold: 6,
+      forceFallback: true,        // a real element follows the pointer, so it can be styled as "floating"
+      fallbackOnBody: false,      // keep the floating copy inside the grid so the cover styles still apply
+      fallbackTolerance: 3,
+      fallbackClass: 'sw-drag-float',
+      ghostClass: 'sw-drag-slot',
+      chosenClass: 'sw-drag-chosen',
+      onChoose: function () { grid.classList.add('sw-dragging'); },
+      onUnchoose: function () { grid.classList.remove('sw-dragging'); },
+      onStart: function () { dragged = true; document.body.classList.add('sw-drag-active'); },
+      onEnd: function (evt) {
+        document.body.classList.remove('sw-drag-active');
+        setTimeout(function () { dragged = false; }, 0);
+        if (evt.oldIndex === evt.newIndex) return;
+        var body = new URLSearchParams({ csrf_token: csrf });
+        grid.querySelectorAll('.book').forEach(function (b, i) { var id = bookId(b); if (id) body.set(id, String(i + 1)); });
+        var manual = $('.sw-sort').data('manual') === 'on';
+        var switchToManual = manual ? $.Deferred().resolve() : $.ajax({
+          method: 'post', contentType: 'application/json; charset=utf-8', dataType: 'json',
+          url: grid.dataset.viewUrl, data: JSON.stringify({ shelf: { man: 'on' } })
+        });
+        $.when(switchToManual).always(function () {
+          fetch(grid.dataset.orderUrl, { method: 'POST', body: body, credentials: 'same-origin' }).then(function (r) {
+            if (!r.ok) throw new Error(r.status);
+            toast({{ _('Order saved')|tojson }});
+            if (!manual) {
+              $('.sw-sort').data('manual', 'on').attr('data-manual', 'on');
+              $('.sw-sort .dropdown-toggle').html('<span class="sw-sort-label">{{ _('Sort') }}:</span> {{ _('Custom order') }} ' +
+                $('.sw-sort .dropdown-toggle svg').prop('outerHTML'));
+            }
+          }).catch(function () { toast({{ _('Could not save the new order')|tojson }}); });
+        });
+      }
+    });
+    // A finished drag must not also open the book drawer.
+    grid.addEventListener('click', function (e) {
+      if (dragged) { e.preventDefault(); e.stopPropagation(); }
+    }, true);
+  });
+</script>
+{% endblock %}
+{% block modal %}
+{{ delete_confirm_modal() }}
+{% endblock %}

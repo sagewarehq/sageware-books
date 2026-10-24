@@ -1,0 +1,394 @@
+{% import 'image.html' as image %}
+{% import 'sageware_macros.html' as sw %}
+{% extends "layout.html" %}
+{% block body %}
+{#
+  Sageware: a "Featured" rail on the home page, driven by a shelf named "Featured" (any case).
+  Templates can't query another shelf's books, so the rail fetches that shelf's page and lifts its covers.
+#}
+{# The home page is "/" with no list arguments; the sidebar's Books link (data=root) still gets the full grid. #}
+{% set sw_home = page == 'newest' and request.path == url_for('web.index') and not request.args.get('data') and (not pagination or pagination.page == 1) %}
+{% set featured = namespace(shelf=None) %}
+{% if sw_home %}
+  {% for shelf in g.shelves_access %}{% if not featured.shelf and shelf.name|lower|trim == 'featured' %}{% set featured.shelf = shelf %}{% endif %}{% endfor %}
+{% endif %}
+{% macro rail_head(title, see_all) -%}
+  <div class="sw-section-head sw-rail-head">
+    <h2><a class="sw-rail-title" href="{{ see_all }}">{{ title }}{{ sw.icon('chevron-left', 'sw-rail-chevron') }}</a></h2>
+    <div class="sw-rail-nav">
+      <button type="button" class="sw-rail-prev" aria-label="{{_('Previous')}}">{{ sw.icon('chevron-left') }}</button>
+      <button type="button" class="sw-rail-next" aria-label="{{_('Next')}}">{{ sw.icon('chevron-left') }}</button>
+    </div>
+  </div>
+{%- endmacro %}
+{% macro rail(id, title, src, see_all, limit=24, size='sm') -%}
+<section class="sw-rail sw-rail-{{ size }}" id="{{ id }}" data-src="{{ src }}" data-limit="{{ limit }}">
+  {{ rail_head(title, see_all) }}
+  <div class="sw-rail-track" aria-busy="true">
+    {% for n in range(8) %}<div class="sw-rail-skeleton"><span></span></div>{% endfor %}
+  </div>
+</section>
+{%- endmacro %}
+{% macro tab_panel(id, label, src, see_all, limit=24) -%}
+  <section class="sw-rail sw-tab-panel" id="{{ id }}" role="tabpanel" data-src="{{ src }}" data-limit="{{ limit }}" data-label="{{ label }}" data-see-all="{{ see_all }}" hidden>
+    <div class="sw-rail-track" aria-busy="true">
+      {% for n in range(10) %}<div class="sw-rail-skeleton"><span></span></div>{% endfor %}
+    </div>
+  </section>
+{%- endmacro %}
+{% if sw_home %}
+{#
+  Home fits one screen: Continue reading, Featured, then one tabbed row for everything else.
+  Cover size comes from the window height (see the layout script below), with a minimum.
+#}
+<div class="sw-home">
+  {# Continue reading: filled in the browser from what the reader recorded (read.html). Hidden until there's something. #}
+  <section class="sw-rail sw-rail-lg" id="sw-continue" data-key="sw.continue.{{ current_user.id }}" hidden>
+    <div class="sw-section-head sw-rail-head">
+      <h2>{{_('Continue reading')}}</h2>
+      <div class="sw-rail-nav">
+        <button type="button" class="sw-rail-prev" aria-label="{{_('Previous')}}">{{ sw.icon('chevron-left') }}</button>
+        <button type="button" class="sw-rail-next" aria-label="{{_('Next')}}">{{ sw.icon('chevron-left') }}</button>
+      </div>
+    </div>
+    <div class="sw-rail-track"></div>
+  </section>
+  {% if featured.shelf %}
+    {{ rail('sw-featured', featured.shelf.name, url_for('shelf.show_shelf', shelf_id=featured.shelf.id), url_for('shelf.show_shelf', shelf_id=featured.shelf.id), 24, 'lg') }}
+  {% endif %}
+
+  {# Two columns: what's new, and a random pick. #}
+  {% set newest_url = url_for('web.books_list', data='newest', sort_param='new', book_id=1) %}
+  <div class="sw-rail-pair">
+    {{ rail('sw-new-arrivals', _('New arrivals'), newest_url, newest_url, 24) }}
+    {% if current_user.show_detail_random() %}
+      {% set discover_url = url_for('web.books_list', data='discover', sort_param='stored') %}
+      {{ rail('sw-discover', _('Discover'), discover_url, discover_url, 24) }}
+    {% endif %}
+  </div>
+
+  {% set tabs = [] %}
+  {% set hot_url = url_for('web.books_list', data='hot', sort_param='stored') %}
+  {{ tabs.append(('sw-popular', _('Popular'), hot_url, hot_url, 24)) or '' }}
+  {% for shelf in g.shelves_access %}
+    {% if shelf.name|lower|trim != 'featured' and shelf.books.all()|length > 0 %}
+      {% set shelf_url = url_for('shelf.show_shelf', shelf_id=shelf.id) %}
+      {{ tabs.append(('sw-shelf-' ~ shelf.id, shelf.name, shelf_url, shelf_url, 24)) or '' }}
+    {% endif %}
+  {% endfor %}
+  {% set rated_url = url_for('web.books_list', data='rated', sort_param='stored') %}
+  {{ tabs.append(('sw-rated', _('Top rated'), rated_url, rated_url, 24)) or '' }}
+  {% set all_url = url_for('web.index', data='root', sort_param='stored') %}
+  {{ tabs.append(('sw-all', _('All books'), all_url, all_url, 30)) or '' }}
+
+  <section class="sw-tabbed" id="sw-tabbed">
+    <div class="sw-tabbed-head">
+      <div class="sw-tabs" role="tablist" aria-label="{{_('Browse')}}">
+        {% for id, label, src, see_all, limit in tabs %}
+          <button type="button" role="tab" class="sw-tab" data-panel="{{ id }}" aria-controls="{{ id }}" aria-selected="false">{{ label }}</button>
+        {% endfor %}
+      </div>
+      <div class="sw-rail-nav">
+        <button type="button" class="sw-tabbed-prev" aria-label="{{_('Previous')}}">{{ sw.icon('chevron-left') }}</button>
+        <button type="button" class="sw-tabbed-next" aria-label="{{_('Next')}}">{{ sw.icon('chevron-left') }}</button>
+      </div>
+      <a class="sw-rail-title sw-tabbed-all" href="{{ tabs[0][3] if tabs else '#' }}">{{_('See all')}}{{ sw.icon('chevron-left', 'sw-rail-chevron') }}</a>
+    </div>
+    {% for id, label, src, see_all, limit in tabs %}
+      {{ tab_panel(id, label, src, see_all, limit) }}
+    {% endfor %}
+  </section>
+</div>{# .sw-home #}
+{% endif %}
+{# Sageware: the stock random "Discover" strip above every list is dropped; the home page has its own Discover row. #}
+{% if sw_home %}
+{% else %}
+<div class="discover load-more">
+  <div class="sw-section-head">
+  <h2 class="{{title}}">{% if page == 'newest' and (not pagination or pagination.page == 1) %}{{_('All books')}}{% else %}{{title}}{% endif %}</h2>
+   {% if page != 'discover' %}
+    {# Sageware: one sort menu in place of the row of glyph buttons. Same ids and URLs. #}
+    {% if page == 'hot' %}
+      {% set sorts = [('hot_desc', 'hotdesc', _('Most downloaded')), ('hot_asc', 'hotasc', _('Least downloaded'))] %}
+    {% else %}
+      {% set sorts = [('new', 'new', _('Recently added')), ('old', 'old', _('Oldest added')),
+                      ('asc', 'abc', _('Title A–Z')), ('desc', 'zyx', _('Title Z–A')),
+                      ('auth_az', 'authaz', _('Author A–Z')), ('auth_za', 'authza', _('Author Z–A')),
+                      ('pub_new', 'pubnew', _('Newest published')), ('pub_old', 'pubold', _('Oldest published'))] %}
+      {% if page == 'series' %}
+        {% set sorts = sorts + [('series_asc', 'seriesasc', _('Series order')), ('series_desc', 'seriesdesc', _('Series order, reversed'))] %}
+      {% endif %}
+    {% endif %}
+    {% set current = (sorts|selectattr(1, 'equalto', order)|first) or sorts[0] %}
+    <div class="filterheader sw-sort dropdown">
+      <button type="button" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        <span class="sw-sort-label">{{_('Sort')}}:</span> {{ current[2] }} {{ sw.icon('chevron-down') }}
+      </button>
+      <ul class="dropdown-menu dropdown-menu-right">
+        {% for sort_id, sort_param, label in sorts %}
+          <li {% if order == sort_param %}class="active"{% endif %}><a id="{{ sort_id }}" href="{{url_for('web.books_list', data=page, book_id=id, sort_param=sort_param)}}">{{ label }}{% if order == sort_param %} {{ sw.icon('check') }}{% endif %}</a></li>
+        {% endfor %}
+      </ul>
+    </div>
+   {% endif %}
+  </div>
+  <div class="row display-flex">
+    {% if entries[0] %}
+    {% for entry in entries %}
+    <div class="col-sm-3 col-lg-2 col-xs-6 book session" id="books">
+      <div class="cover">
+          <a href="{{ url_for('web.show_book', book_id=entry.Books.id) }}" {% if simple==false %}data-toggle="modal" data-target="#bookDetailsModal" data-remote="false"{% endif %}>
+            <span class="img" title="{{ entry.Books.title }}">
+              {{ image.book_cover(entry.Books) }}
+              {% if entry[2] == True %}<span class="badge read glyphicon glyphicon-ok"></span>{% endif %}
+            </span>
+          </a>
+      </div>
+      <div class="meta">
+        <a href="{{ url_for('web.show_book', book_id=entry.Books.id) }}" {% if simple==false %}data-toggle="modal" data-target="#bookDetailsModal" data-remote="false"{% endif %}>
+          <p title="{{ entry.Books.title }}" class="title">{{entry.Books.title|shortentitle}}</p>
+        </a>
+        <p class="author">
+          {% for author in entry.Books.authors %}
+            {% if loop.index > g.config_authors_max and g.config_authors_max != 0 %}
+              {% if not loop.first %}
+                <span class="author-hidden-divider">&amp;</span>
+			  {% endif %}
+              <a class="author-name author-hidden" href="{{url_for('web.books_list', data='author', book_id=author.id, sort_param='stored') }}">{{author.name.replace('|',',')|shortentitle(30)}}</a>
+              {% if loop.last %}
+                <a href="#" class="author-expand" data-authors-max="{{g.config_authors_max}}" data-collapse-caption="({{_('reduce')}})">(...)</a>
+              {% endif %}
+            {% else %}
+              {% if not loop.first %}
+                <span>&amp;</span>
+              {% endif %}
+              <a class="author-name" href="{{url_for('web.books_list', data='author', book_id=author.id, sort_param='stored') }}">{{author.name.replace('|',',')|shortentitle(30)}}</a>
+            {% endif %}
+          {% endfor %}
+          {% if entry.Books.data|music %}
+            <span class="glyphicon glyphicon-music"></span>
+          {% endif %}
+        </p>
+        {% if entry.Books.series.__len__() > 0 %}
+        <p class="series">
+        {% if page != "series" %}
+          <a href="{{url_for('web.books_list', data='series', sort_param='stored', book_id=entry.Books.series[0].id )}}">
+            {{entry.Books.series[0].name}}
+          </a>
+        {% else %}
+            <span>{{entry.Books.series[0].name}}</span>
+        {% endif %}
+          ({{entry.Books.series_index|formatfloat(2)}})
+        </p>
+        {% endif %}
+        {% if entry.Books.ratings.__len__() > 0 %}
+        <div class="rating">
+          {% for number in range((entry.Books.ratings[0].rating/2)|int(2)) %}
+            <span class="glyphicon glyphicon-star good"></span>
+            {% if loop.last and loop.index < 5 %}
+              {% for numer in range(5 - loop.index) %}
+                <span class="glyphicon glyphicon-star-empty"></span>
+              {% endfor %}
+            {% endif %}
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  {% endif %}
+  </div>
+</div>
+{% endif %}{# not sw_home #}
+{% endblock %}
+
+{% block js %}
+<script>
+  // Continue reading row, from the list the EPUB reader keeps in this browser.
+  (function () {
+    var rail = document.getElementById('sw-continue');
+    if (!rail) return;
+    var key = rail.dataset.key, track = rail.querySelector('.sw-rail-track');
+    function load() { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (e) { return []; } }
+    function render() {
+      var list = load();
+      track.innerHTML = '';
+      rail.hidden = !list.length;
+      list.forEach(function (b) {
+        var pct = b.percent == null ? null : Math.max(0, Math.min(100, b.percent));
+        var item = document.createElement('div');
+        item.className = 'book sw-rail-item sw-continue-item';
+        item.innerHTML =
+          '<div class="cover"><a href="' + b.url + '"><span class="img"><img alt="" loading="lazy"></span></a>' +
+          (pct != null ? '<span class="sw-progress-badge">' + pct + '%</span><span class="sw-progress"><i style="width:' + pct + '%"></i></span>' : '') +
+          '<button type="button" class="sw-continue-remove" aria-label="{{ _('Remove from Continue reading') }}">&times;</button></div>' +
+          '<div class="meta"><p class="title"></p></div>';
+        item.querySelector('img').src = b.cover;
+        item.querySelector('a').title = b.title;
+        item.querySelector('.title').textContent = b.title;
+        item.querySelector('.sw-continue-remove').addEventListener('click', function () {
+          try { localStorage.setItem(key, JSON.stringify(load().filter(function (e) { return e.id !== b.id; }))); } catch (e) {}
+          render();
+        });
+        track.appendChild(item);
+      });
+    }
+    render();
+    window.addEventListener('pageshow', render);   // coming back from the reader with the back button
+  })();
+</script>
+<script>
+  // Home rails: fetched rails lift book cards from another page (a shelf, a list) in that page's order.
+  // Rails with their own arrows page themselves; tab panels are paged from the tab bar.
+  $(function () {
+    document.querySelectorAll('.sw-rail').forEach(function (rail) {
+      var track = rail.querySelector('.sw-rail-track');
+      var prev = rail.querySelector(':scope > .sw-rail-head .sw-rail-prev');
+      var next = rail.querySelector(':scope > .sw-rail-head .sw-rail-next');
+      function update() {
+        if (!prev) return;
+        prev.disabled = track.scrollLeft < 4;
+        next.disabled = track.scrollLeft + track.clientWidth > track.scrollWidth - 4;
+        rail.classList.toggle('sw-rail-static', prev.disabled && next.disabled);
+      }
+      if (prev) {
+        var page = function (dir) { track.scrollBy({ left: dir * track.clientWidth * 0.85, behavior: 'smooth' }); };
+        prev.addEventListener('click', function () { page(-1); });
+        next.addEventListener('click', function () { page(1); });
+        track.addEventListener('scroll', update, { passive: true });
+        window.addEventListener('resize', update);
+      }
+      rail.swUpdate = update;
+      track.querySelectorAll('.book').forEach(function (b) { b.classList.add('sw-rail-item'); });
+      if (!rail.dataset.src) { update(); return; }
+      var limit = parseInt(rail.dataset.limit, 10) || 24;
+      fetch(rail.dataset.src, { credentials: 'same-origin' }).then(function (r) { return r.text(); }).then(function (html) {
+        var doc = new DOMParser().parseFromString(html, 'text/html');
+        var books = Array.prototype.slice.call(doc.querySelectorAll('.discover.load-more .row.display-flex > .book, .sw-shelf .row.display-flex > .book')).slice(0, limit);
+        if (!books.length) { rail.dispatchEvent(new CustomEvent('sw:empty', { bubbles: true })); rail.remove(); return; }
+        track.innerHTML = '';
+        books.forEach(function (b) {
+          b.removeAttribute('style');
+          b.removeAttribute('id');
+          b.className = 'book sw-rail-item';
+          track.appendChild(document.importNode(b, true));
+        });
+        track.removeAttribute('aria-busy');
+        update();
+        rail.dispatchEvent(new CustomEvent('sw:loaded', { bubbles: true }));
+      }).catch(function () { rail.dispatchEvent(new CustomEvent('sw:empty', { bubbles: true })); rail.remove(); });
+    });
+  });
+</script>
+<script>
+  // Tabbed row: one panel at a time, remembered per browser; arrows and "See all" follow the active tab.
+  $(function () {
+    var box = document.getElementById('sw-tabbed');
+    if (!box) return;
+    var KEY = 'sw.home.tab';
+    var allLink = box.querySelector('.sw-tabbed-all');
+    var prev = box.querySelector('.sw-tabbed-prev'), next = box.querySelector('.sw-tabbed-next');
+    function tabs() { return Array.prototype.slice.call(box.querySelectorAll('.sw-tab')); }
+    function panel(tab) { return document.getElementById(tab.dataset.panel); }
+    function active() { return box.querySelector('.sw-tab[aria-selected="true"]'); }
+    function track() { var t = active(); return t && panel(t) ? panel(t).querySelector('.sw-rail-track') : null; }
+    function update() {
+      var tr = track();
+      if (!tr) return;
+      prev.disabled = tr.scrollLeft < 4;
+      next.disabled = tr.scrollLeft + tr.clientWidth > tr.scrollWidth - 4;
+      box.classList.toggle('sw-rail-static', prev.disabled && next.disabled);
+    }
+    function select(tab, remember) {
+      tabs().forEach(function (t) {
+        var on = t === tab;
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+        t.tabIndex = on ? 0 : -1;
+        if (panel(t)) panel(t).hidden = !on;
+      });
+      allLink.href = panel(tab).dataset.seeAll;
+      tab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      if (remember) { try { localStorage.setItem(KEY, tab.dataset.panel); } catch (e) {} }
+      update();
+    }
+    box.addEventListener('click', function (e) {
+      var t = e.target.closest('.sw-tab');
+      if (t) select(t, true);
+    });
+    box.querySelector('.sw-tabs').addEventListener('keydown', function (e) {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      var list = tabs(), i = list.indexOf(active());
+      var t = list[(i + (e.key === 'ArrowRight' ? 1 : -1) + list.length) % list.length];
+      select(t, true); t.focus(); e.preventDefault();
+    });
+    // A tab whose list turns out empty disappears; if it was selected, move on to the first remaining one.
+    box.addEventListener('sw:empty', function (e) {
+      var t = box.querySelector('.sw-tab[data-panel="' + e.target.id + '"]');
+      var was = t && t.getAttribute('aria-selected') === 'true';
+      if (t) t.remove();
+      if (was && tabs().length) select(tabs()[0], false);
+      if (!tabs().length) box.remove();
+    });
+    box.addEventListener('sw:loaded', update);
+    function page(dir) { var tr = track(); if (tr) tr.scrollBy({ left: dir * tr.clientWidth * 0.85, behavior: 'smooth' }); }
+    prev.addEventListener('click', function () { page(-1); });
+    next.addEventListener('click', function () { page(1); });
+    box.addEventListener('scroll', update, true);
+    window.addEventListener('resize', update);
+    var saved = null;
+    try { saved = localStorage.getItem(KEY); } catch (e) {}
+    select(tabs().filter(function (t) { return t.dataset.panel === saved; })[0] || tabs()[0], false);
+  });
+</script>
+<script>
+  // Fit the home page to the window: share the height left under the top bar between the visible bands
+  // and size covers from that, never below a minimum (then the page simply scrolls).
+  $(function () {
+    var home = document.querySelector('.sw-home');
+    if (!home) return;
+    var MIN = window.matchMedia('(max-width: 767px)').matches ? 120 : 110, MAX = 480;
+    function layout() {
+      var bands = Array.prototype.slice.call(home.querySelectorAll(':scope > .sw-rail:not([hidden]), :scope > .sw-rail-pair, :scope > .sw-tabbed'));
+      if (!bands.length) return;
+      // Room from the top of the rows to the bottom of the window, minus whatever the page adds below them.
+      var homeBox = home.getBoundingClientRect();
+      // Real content below the rows (body padding etc.), not the empty space a short page leaves in the window.
+      var bodyBox = document.body.getBoundingClientRect();
+      var below = bodyBox.bottom + parseFloat(getComputedStyle(document.body).marginBottom || 0) - homeBox.bottom;
+      var available = window.innerHeight - (homeBox.top + window.scrollY) - Math.max(0, below) - 4;
+      // Everything in a band that isn't the cover itself: heading/tabs, padding, divider.
+      var chrome = bands.reduce(function (sum, band) {
+        // Measure a cover the user can actually see: for the tabbed row that's the active panel (hidden ones are 0px).
+        var cover = band.classList.contains('sw-tabbed')
+          ? band.querySelector('.sw-tab-panel:not([hidden]) .cover') || band.querySelector('.sw-tab-panel:not([hidden]) .sw-rail-skeleton span')
+          : band.querySelector('.cover') || band.querySelector('.sw-rail-skeleton span');
+        if (!cover) return sum;
+        var coverH = cover ? cover.getBoundingClientRect().height : 0;
+        return sum + Math.max(0, band.getBoundingClientRect().height - coverH);
+      }, 0);
+      var weights = bands.map(function (b) { return b.id === 'sw-featured' ? 1.15 : 1; });
+      var unit = (available - chrome) / weights.reduce(function (a, b) { return a + b; }, 0);
+      bands.forEach(function (band, i) {
+        var h = Math.max(MIN, Math.min(MAX, Math.floor(unit * weights[i])));
+        band.style.setProperty('--sw-cover-h', h + 'px');
+      });
+    }
+    function run() {
+      try { layout(); layout(); } catch (e) { if (window.console) console.error('home layout', e); }
+    }
+    var timer;
+    function schedule() { clearTimeout(timer); timer = setTimeout(run, 30); }
+    window.addEventListener('resize', schedule);
+    window.addEventListener('load', schedule);
+    function fromVisible(e) { var p = e.target.closest && e.target.closest('.sw-tab-panel'); return !p || !p.hidden; }
+    home.addEventListener('sw:loaded', function (e) { if (fromVisible(e)) schedule(); });
+    home.addEventListener('sw:empty', schedule);
+    home.addEventListener('load', function (e) { if (fromVisible(e)) schedule(); }, true);   // cover images finishing can change heights
+    // Re-fit when a whole band appears or disappears (e.g. Continue reading), not when a tab panel is switched.
+    new MutationObserver(function (records) {
+      if (records.some(function (r) { return r.target.parentNode === home; })) schedule();
+    }).observe(home, { attributes: true, subtree: true, attributeFilter: ['hidden'] });
+    run();
+  });
+</script>
+{% endblock %}

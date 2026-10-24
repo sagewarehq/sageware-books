@@ -1,0 +1,48 @@
+{% extends "layout.html" %}
+{% import 'sageware_macros.html' as sw %}
+{# Sageware: drag-to-order list. shelforder.js needs #sortTrue, .list-group-item rows whose id is the book id, and sendData(). #}
+{% block body %}
+<div class="sw-settings sw-arrange">
+  <a class="sw-crumb" href="{{ url_for('shelf.show_shelf', shelf_id=shelf.id) }}">{{ sw.icon('chevron-left') }} {{ shelf.name }}</a>
+  <header class="sw-page-head">
+    <div>
+      <h1>{{_('Arrange books')}}</h1>
+      <p>{{_('Drag books into the order you want, then save. The shelf switches to custom order.')}}</p>
+    </div>
+  </header>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div id="sortTrue" class="sw-order-list">
+    {% for entry in entries %}
+      <div id="{{entry['Books']['id']}}" class="list-group-item sw-order-row">
+        <span class="sw-order-handle">{{ sw.icon('grip-vertical') }}</span>
+        <span class="sw-order-pos">{{ loop.index }}</span>
+        {% if entry['visible'] %}
+          <img class="sw-order-cover" alt="" src="{{ url_for('web.get_cover', book_id=entry['Books']['id']) }}">
+          <span class="sw-order-text">
+            <strong>{{ entry['Books']['title'] }}</strong>
+            <small>{% for author in entry['Books']['author'] %}{{ author.name.replace('|',',') }}{% if not loop.last %} &amp; {% endif %}{% endfor %}{% if entry['Books']['series']|length > 0 %} · {{ entry['Books']['series'][0].name }} {{ entry['Books']['series_index']|formatfloat(2) }}{% endif %}</small>
+          </span>
+        {% else %}
+          <img class="sw-order-cover" alt="" src="{{ url_for('static', filename='generic_cover.jpg') }}">
+          <span class="sw-order-text"><strong>{{_('Hidden Book')}}</strong></span>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+  <div class="sw-form-actions">
+    <a href="{{ url_for('shelf.show_shelf', shelf_id=shelf.id) }}" id="shelf_back" class="btn btn-default">{{_('Cancel')}}</a>
+    <button onclick="sendData('{{ url_for('shelf.order_shelf', shelf_id=shelf.id) }}')" class="btn btn-primary" id="ChangeOrder">{{_('Save order')}}</button>
+  </div>
+</div>
+{% endblock %}
+
+{% block js %}
+<script src="{{ url_for('static', filename='js/libs/Sortable.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/shelforder.js') }}"></script>
+<script>
+  // Keep the position numbers in step while dragging.
+  new MutationObserver(function () {
+    document.querySelectorAll('#sortTrue .sw-order-pos').forEach(function (el, i) { el.textContent = i + 1; });
+  }).observe(document.getElementById('sortTrue'), { childList: true });
+</script>
+{% endblock %}

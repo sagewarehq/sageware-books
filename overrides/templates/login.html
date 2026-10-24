@@ -1,0 +1,166 @@
+{% extends "layout.html" %}
+{% import 'sageware_macros.html' as sw %}
+{# Sageware: first screen in the Foundry style (see Pulse's Hero): brand hero on the left, sign-in panel on the right. #}
+{% block body %}
+{# If this page was fetched into the book drawer (session expired), jQuery runs this script: leave for the real login page. #}
+<script>if (window.swToLogin && location.pathname !== {{ url_for('web.login')|tojson }}) window.swToLogin();</script>
+<div class="sw-onboard">
+  <aside class="sw-hero">
+    <div class="sw-hero-brand"><span class="sw-logo">{{ sw.icon('library-big') }}</span>{{ instance }}</div>
+    <h1 class="sw-hero-title">The books we learn from, in one place.</h1>
+    <p class="sw-hero-lede">The team's shared library: engineering, design and management reads, organized on shelves and ready to open in your browser or send to your eReader.</p>
+
+    <div class="sw-hero-stage" aria-hidden="true">
+      {# A miniature of the library: top bar, shelves, and covers that rise into place. #}
+      <div class="sw-tilt">
+      <svg class="sw-hero-preview" viewBox="0 0 520 320" role="img">
+        <rect x="0.5" y="0.5" width="519" height="319" rx="14" fill="#fafaf9" stroke="#e7e5e2"/>
+        <rect x="0.5" y="0.5" width="519" height="40" rx="14" fill="#ffffff"/>
+        <rect x="0.5" y="26" width="519" height="15" fill="#ffffff"/>
+        <line x1="0" x2="520" y1="40.5" y2="40.5" stroke="#e7e5e2"/>
+        <rect x="16" y="11" width="18" height="18" rx="5" fill="#3d7a68"/>
+        <text x="42" y="24" font-size="10.5" font-weight="650" fill="#1c1b19" font-family="Inter, sans-serif">{{ instance }}</text>
+        <rect x="150" y="12" width="170" height="16" rx="5" fill="#f4f4f2"/>
+        <rect x="430" y="12" width="44" height="16" rx="5" fill="#3d7a68"/>
+        <circle cx="494" cy="20" r="8" fill="#e9f2ee"/>
+        <g font-family="Inter, sans-serif" font-size="8">
+          <text x="18" y="64" fill="#a19d97" font-weight="600" letter-spacing="0.6">SHELVES</text>
+          <rect x="12" y="72" width="104" height="18" rx="5" fill="#e9f2ee"/>
+          <text x="22" y="84" fill="#3d7a68" font-weight="600">Engineering</text>
+          <text x="22" y="104" fill="#6f6b66">Design</text>
+          <text x="22" y="122" fill="#6f6b66">Management</text>
+          <text x="18" y="150" fill="#a19d97" font-weight="600" letter-spacing="0.6">BROWSE</text>
+          <text x="22" y="170" fill="#6f6b66">Books</text>
+          <text x="22" y="188" fill="#6f6b66">Discover</text>
+          <text x="22" y="206" fill="#6f6b66">Authors</text>
+        </g>
+        <text x="136" y="66" font-size="12" font-weight="700" fill="#1c1b19" font-family="Inter, sans-serif">Engineering</text>
+        {% set covers = [('#1f3a5f', '#e8c170'), ('#c8553d', '#f6efe2'), ('#2d6a4f', '#d8f3dc'), ('#f2c14e', '#3a2e1f'), ('#3d405b', '#f4f1de'),
+                         ('#6d597a', '#eaac8b'), ('#e07a5f', '#3d405b'), ('#264653', '#e9c46a'), ('#8d99ae', '#2b2d42'), ('#b5838d', '#ffcdb2')] %}
+        <g class="sw-hero-books">
+        {% for bg, ink in covers %}
+          {% set col = loop.index0 % 5 %}{% set row = loop.index0 // 5 %}
+          {% set x = 136 + col * 74 %}{% set y = 80 + row * 118 %}
+          <g class="sw-hero-book" style="animation-delay: {{ 80 + loop.index0 * 70 }}ms">
+            <rect x="{{ x }}" y="{{ y }}" width="62" height="88" rx="5" fill="{{ bg }}"/>
+            <rect x="{{ x + 8 }}" y="{{ y + 14 }}" width="{{ 46 - (loop.index0 % 3) * 8 }}" height="5" rx="2" fill="{{ ink }}" opacity="0.9"/>
+            <rect x="{{ x + 8 }}" y="{{ y + 24 }}" width="{{ 30 + (loop.index0 % 2) * 10 }}" height="5" rx="2" fill="{{ ink }}" opacity="0.6"/>
+            <rect x="{{ x + 8 }}" y="{{ y + 72 }}" width="24" height="4" rx="2" fill="{{ ink }}" opacity="0.5"/>
+            <rect x="{{ x }}" y="{{ y + 94 }}" width="{{ 50 - (loop.index0 % 3) * 6 }}" height="5" rx="2" fill="#1c1b19" opacity="0.75"/>
+            <rect x="{{ x }}" y="{{ y + 103 }}" width="34" height="4" rx="2" fill="#a19d97"/>
+          </g>
+        {% endfor %}
+        </g>
+      </svg>
+      <span class="sw-glare"></span>
+      </div>
+    </div>
+
+    <ul class="sw-hero-points">
+      <li>{{ sw.icon('bookmark') }}<div><b>Shared shelves</b><span>Curated lists for engineering, design, management and more.</span></div></li>
+      <li>{{ sw.icon('book-open') }}<div><b>Read anywhere</b><span>Open books in the browser, download them, or send them to your eReader.</span></div></li>
+      <li>{{ sw.icon('shield') }}<div><b>Just for the team</b><span>Accounts only. Ask an admin if you need access.</span></div></li>
+    </ul>
+  </aside>
+
+  <main class="sw-onboard-panel">
+    <div class="sw-onboard-inner">
+      <div class="sw-onboard-brand"><span class="sw-logo">{{ sw.icon('library-big') }}</span>{{ instance }}</div>
+      <h2 class="sw-onboard-h">{{_('Sign in')}}</h2>
+      <p class="sw-onboard-sub">{{_('Welcome back. Sign in with your')}} {{ instance }} {{_('account.')}}</p>
+
+      {% if error %}
+        <div class="alert alert-danger sw-inline-alert">{{ error }}</div>
+      {% endif %}
+      {# layout.html already rendered these as toasts (hidden here); Flask returns the same list again. #}
+      {% for category, message in get_flashed_messages(with_categories=True) %}
+        <div class="alert alert-{{ {'error': 'danger', 'message': 'info'}.get(category, category) }} sw-inline-alert">{{ message }}</div>
+      {% endfor %}
+
+      <form method="POST" role="form" class="sw-login-form">
+        <input type="hidden" name="next" value="{{next_url}}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-group">
+          <label for="username">{{_('Username')}}</label>
+          <input type="text" class="form-control" id="username" name="username" autocapitalize="off" autocomplete="username" autofocus value="{{ username }}">
+        </div>
+        <div class="form-group">
+          <div class="sw-label-row">
+            <label for="password">{{_('Password')}}</label>
+            {% if config.config_login_type == 0 and mail %}
+              <button type="submit" name="forgot" value="forgot" class="sw-link-btn" formnovalidate>{{_('Forgot Password?')}}</button>
+            {% endif %}
+          </div>
+          <input type="password" class="form-control" id="password" name="password" autocomplete="current-password" value="{{ password }}">
+        </div>
+        <label class="sw-toggle sw-remember">
+          <input type="checkbox" name="remember_me" checked>
+          <span class="sw-switch" aria-hidden="true"></span>
+          <span>{{_('Remember Me')}}</span>
+        </label>
+        <button type="submit" name="submit" class="btn btn-primary sw-btn-block">{{_('Sign in')}}</button>
+
+        {% if config.config_remote_login or (config.config_login_type == 2 and (1 in oauth_check or 2 in oauth_check)) %}
+          <div class="sw-or"><span>{{_('or')}}</span></div>
+          <div class="sw-alt-logins">
+            {% if config.config_remote_login %}
+              <a href="{{url_for('remotelogin.remote_login')}}" id="remote_login" class="btn btn-default sw-btn-block">{{ sw.icon('link') }} {{_('Log in with Magic Link')}}</a>
+            {% endif %}
+            {% if config.config_login_type == 2 and 1 in oauth_check %}
+              <a href="{{url_for('oauth.github_login')}}" class="btn btn-default sw-btn-block github">{{_('Continue with GitHub')}}</a>
+            {% endif %}
+            {% if config.config_login_type == 2 and 2 in oauth_check %}
+              <a href="{{url_for('oauth.google_login')}}" class="btn btn-default sw-btn-block google">{{_('Continue with Google')}}</a>
+            {% endif %}
+          </div>
+        {% endif %}
+
+        {% if g.allow_registration %}
+          <p class="sw-onboard-foot">{{_('New here?')}} <a id="register" href="{{url_for('web.register')}}">{{_('Create an account')}}</a></p>
+        {% endif %}
+      </form>
+    </div>
+  </main>
+</div>
+<script>
+  // The miniature leans toward the pointer: eased with requestAnimationFrame, back to rest when it leaves.
+  (function () {
+    var hero = document.querySelector('.sw-hero');
+    var tilt = document.querySelector('.sw-tilt');
+    if (!hero || !tilt || !window.matchMedia('(hover: hover)').matches) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var REST = { rx: 4, ry: -6, gx: 30, gy: 20, px: 0, py: 0 };
+    var cur = Object.assign({}, REST), target = Object.assign({}, REST), frame = null;
+    function step() {
+      var moving = false;
+      for (var k in cur) {
+        var d = target[k] - cur[k];
+        cur[k] += d * 0.12;
+        if (Math.abs(d) > 0.01) moving = true;
+      }
+      tilt.style.setProperty('--rx', cur.rx.toFixed(2) + 'deg');
+      tilt.style.setProperty('--ry', cur.ry.toFixed(2) + 'deg');
+      tilt.style.setProperty('--gx', cur.gx.toFixed(1) + '%');
+      tilt.style.setProperty('--gy', cur.gy.toFixed(1) + '%');
+      tilt.style.setProperty('--px', cur.px.toFixed(2) + 'px');
+      tilt.style.setProperty('--py', cur.py.toFixed(2) + 'px');
+      frame = moving ? requestAnimationFrame(step) : null;
+    }
+    function kick() { if (!frame) frame = requestAnimationFrame(step); }
+    hero.addEventListener('pointermove', function (e) {
+      var r = tilt.getBoundingClientRect();
+      // -1..1 from the preview's centre, softened outside it
+      var x = Math.max(-1.4, Math.min(1.4, (e.clientX - (r.left + r.width / 2)) / (r.width / 2)));
+      var y = Math.max(-1.4, Math.min(1.4, (e.clientY - (r.top + r.height / 2)) / (r.height / 2)));
+      target = { rx: -y * 9, ry: x * 12, gx: 50 + x * 40, gy: 50 + y * 40, px: x * 6, py: y * 4 };
+      tilt.classList.add('is-active');
+      kick();
+    });
+    hero.addEventListener('pointerleave', function () {
+      target = Object.assign({}, REST);
+      tilt.classList.remove('is-active');
+      kick();
+    });
+  })();
+</script>
+{% endblock %}
