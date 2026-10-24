@@ -28,6 +28,9 @@ browsers drop their cached copies.
 
 ## Deploying
 
-Push to `main`; Dokploy deploys the `books` compose service from this repo. Secrets live in Dokploy's
-Environment tab, never in the repo. The data volumes are `sageware_books_config` and
+Push to `main`, then trigger a deploy of the `books` compose service in Dokploy (pushing alone doesn't
+deploy). After every deploy, stop and start the service: the deploy re-clones the repo but keeps the
+running container, whose theme bind mounts then point at the deleted checkout and the site loses its
+styling. The full steps and checks are in [.agents/skills/deploy/SKILL.md](.agents/skills/deploy/SKILL.md).
+Secrets live in Dokploy's Environment tab, never in the repo. The data volumes are `sageware_books_config` and
 `sageware_books_library`: never deploy with "Fresh Volumes".
