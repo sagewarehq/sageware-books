@@ -22,7 +22,7 @@ if not marker.exists():
     with sqlite3.connect(config / 'app.db') as db:
         assert db.execute('SELECT count(*) FROM user WHERE name = ?', ('admin',)).fetchone()[0] == 1
         db.execute('UPDATE user SET name = ?, email = ?, password = ? WHERE name = ?',
-                   ('jesse', 'jesse@sageware.io', os.environ['ADMIN_PASSWORD_HASH'], 'admin'))
+                   (os.environ['ADMIN_NAME'], os.environ['ADMIN_EMAIL'], os.environ['ADMIN_PASSWORD_HASH'], 'admin'))
         db.execute('UPDATE settings SET config_calibre_dir = ?, config_calibre_web_title = ?, config_anonbrowse = 0, config_public_reg = 0, config_uploading = 1, config_remote_login = 0',
                    ('/books', 'Sageware Books'))
         assert db.execute('SELECT count(*) FROM settings').fetchone()[0] == 1

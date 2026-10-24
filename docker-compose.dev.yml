@@ -1,7 +1,6 @@
 # Local preview: the production image with our overrides mounted on top.
 #   docker compose -f docker-compose.dev.yml up -d
 #   open http://localhost:8083  (admin / admin123 on a fresh dev/config)
-#   Local test accounts: maria (Reader) and sam (Editor), password Dev-Test-<name>-2026!
 # Templates are cached by Flask; restart the container after editing them.
 services:
   calibre-web:

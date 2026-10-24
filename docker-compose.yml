@@ -1,8 +1,8 @@
 # Production: books.sageware.io on Dokploy (project "books"), deployed from this repo.
 # The stock linuxserver Calibre-Web image runs with the Sageware theme (overrides/) bind-mounted on top.
 #
-# Secrets come from Dokploy's Environment tab (written to .env): ADMIN_PASSWORD_HASH, LIBRARY_SEED.
-# Both are only read on a first-ever start (empty volumes).
+# Secrets come from Dokploy's Environment tab (written to .env): ADMIN_NAME, ADMIN_EMAIL,
+# ADMIN_PASSWORD_HASH, LIBRARY_SEED. They are only read on a first-ever start (empty volumes).
 #
 # Never change the volume names below: they hold the library and app.db. A deploy with "Fresh Volumes"
 # or new names would start an empty library.
@@ -11,6 +11,8 @@ services:
     image: lscr.io/linuxserver/calibre-web:0.6.27-ls406
     entrypoint: ["python3", "/init/init_books.py"]
     environment:
+      ADMIN_NAME: ${ADMIN_NAME}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
       ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH}
       LIBRARY_SEED: ${LIBRARY_SEED}
       LIBRARY_SEED_SHA256: fac2f7e37ef4bc0fb2955e9a3f612604707d4ef573af5c28bd7a8369339f4bd4
