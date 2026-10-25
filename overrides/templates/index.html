@@ -8,22 +8,26 @@
 #}
 {# The home page is "/" with no list arguments; the sidebar's Books link (data=root) still gets the full grid. #}
 {% set sw_home = page == 'newest' and request.path == url_for('web.index') and not request.args.get('data') and (not pagination or pagination.page == 1) %}
-{% set featured = namespace(shelf=None) %}
+{% set featured = namespace(shelf=None, essential=None) %}
 {% if sw_home %}
-  {% for shelf in g.shelves_access %}{% if not featured.shelf and shelf.name|lower|trim == 'featured' %}{% set featured.shelf = shelf %}{% endif %}{% endfor %}
+  {% for shelf in g.shelves_access %}
+    {% if not featured.shelf and shelf.name|lower|trim == 'featured' %}{% set featured.shelf = shelf %}{% endif %}
+    {# "Essential reading": material from Sageware itself, shown first on the home page. #}
+    {% if not featured.essential and shelf.name|lower|trim == 'essential reading' %}{% set featured.essential = shelf %}{% endif %}
+  {% endfor %}
 {% endif %}
-{% macro rail_head(title, see_all) -%}
+{% macro rail_head(title, see_all, eyebrow='') -%}
   <div class="sw-section-head sw-rail-head">
-    <h2><a class="sw-rail-title" href="{{ see_all }}">{{ title }}{{ sw.icon('chevron-left', 'sw-rail-chevron') }}</a></h2>
+    <h2><a class="sw-rail-title" href="{{ see_all }}">{{ title }}{{ sw.icon('chevron-left', 'sw-rail-chevron') }}</a>{% if eyebrow %}<span class="sw-rail-eyebrow">{{ eyebrow }}</span>{% endif %}</h2>
     <div class="sw-rail-nav">
       <button type="button" class="sw-rail-prev" aria-label="{{_('Previous')}}">{{ sw.icon('chevron-left') }}</button>
       <button type="button" class="sw-rail-next" aria-label="{{_('Next')}}">{{ sw.icon('chevron-left') }}</button>
     </div>
   </div>
 {%- endmacro %}
-{% macro rail(id, title, src, see_all, limit=24, size='sm') -%}
+{% macro rail(id, title, src, see_all, limit=24, size='sm', eyebrow='') -%}
 <section class="sw-rail sw-rail-{{ size }}" id="{{ id }}" data-src="{{ src }}" data-limit="{{ limit }}">
-  {{ rail_head(title, see_all) }}
+  {{ rail_head(title, see_all, eyebrow) }}
   <div class="sw-rail-track" aria-busy="true">
     {% for n in range(8) %}<div class="sw-rail-skeleton"><span></span></div>{% endfor %}
   </div>
@@ -38,7 +42,7 @@
 {%- endmacro %}
 {% if sw_home %}
 {#
-  Home fits one screen: Continue reading, Featured, then one tabbed row for everything else.
+  Home fits one screen: Continue reading, Essential reading, Featured, then the rest in two bands.
   Cover size comes from the window height (see the layout script below), with a minimum.
 #}
 <div class="sw-home">
@@ -53,6 +57,10 @@
     </div>
     <div class="sw-rail-track"></div>
   </section>
+  {% if featured.essential %}
+    {% set essential_url = url_for('shelf.show_shelf', shelf_id=featured.essential.id) %}
+    {{ rail('sw-essential', featured.essential.name, essential_url, essential_url, 24, 'lg', _('From Sageware')) }}
+  {% endif %}
   {% if featured.shelf %}
     {{ rail('sw-featured', featured.shelf.name, url_for('shelf.show_shelf', shelf_id=featured.shelf.id), url_for('shelf.show_shelf', shelf_id=featured.shelf.id), 24, 'lg') }}
   {% endif %}
@@ -71,7 +79,7 @@
   {% set hot_url = url_for('web.books_list', data='hot', sort_param='stored') %}
   {{ tabs.append(('sw-popular', _('Popular'), hot_url, hot_url, 24)) or '' }}
   {% for shelf in g.shelves_access %}
-    {% if shelf.name|lower|trim != 'featured' and shelf.books.all()|length > 0 %}
+    {% if shelf.name|lower|trim not in ['featured', 'essential reading'] and shelf.books.all()|length > 0 %}
       {% set shelf_url = url_for('shelf.show_shelf', shelf_id=shelf.id) %}
       {{ tabs.append(('sw-shelf-' ~ shelf.id, shelf.name, shelf_url, shelf_url, 24)) or '' }}
     {% endif %}
@@ -366,7 +374,7 @@
         var coverH = cover ? cover.getBoundingClientRect().height : 0;
         return sum + Math.max(0, band.getBoundingClientRect().height - coverH);
       }, 0);
-      var weights = bands.map(function (b) { return b.id === 'sw-featured' ? 1.15 : 1; });
+      var weights = bands.map(function (b) { return (b.id === 'sw-featured' || b.id === 'sw-essential') ? 1.15 : 1; });
       var unit = (available - chrome) / weights.reduce(function (a, b) { return a + b; }, 0);
       bands.forEach(function (band, i) {
         var h = Math.max(MIN, Math.min(MAX, Math.floor(unit * weights[i])));
