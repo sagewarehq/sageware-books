@@ -1,6 +1,6 @@
 {# Sageware theme helpers. Icons come from static/sageware/icons.svg (Lucide 0.548.0, see tools/build_icons.py). #}
 {# Bump on every theme change so browsers drop cached CSS and icons. #}
-{% set version = '5' %}
+{% set version = '6' %}
 
 {% macro icon(name, cls='') -%}
 <svg class="sw-icon {{ cls }}" aria-hidden="true" focusable="false"><use href="{{ url_for('static', filename='sageware/icons.svg') }}?v={{ version }}#{{ name }}"></use></svg>

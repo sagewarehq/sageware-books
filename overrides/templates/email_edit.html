@@ -75,8 +75,9 @@
     </section>
       <div class="sw-form-actions">
         <a href="{{ url_for('admin.admin') }}" id="email_back" class="btn btn-default">{{_('Cancel')}}</a>
-        <button type="submit" name="test" value="test" class="btn btn-default">{{ sw.icon('send') }} {{_('Save and Send Test Email')}}</button>
+        {# Save comes first in the markup so Enter saves; CSS order shows the test button before it. #}
         <button type="submit" name="submit" value="submit" class="btn btn-primary">{{_('Save')}}</button>
+        <button type="submit" name="test" value="test" class="btn btn-default sw-order-before">{{ sw.icon('send') }} {{_('Save and Send Test Email')}}</button>
       </div>
    {% if feature_support['gmail'] %}
     </div>

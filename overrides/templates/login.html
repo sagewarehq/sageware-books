@@ -88,7 +88,9 @@
           <div class="sw-label-row">
             <label for="password">{{_('Password')}}</label>
             {% if config.config_login_type == 0 and mail %}
-              <button type="submit" name="forgot" value="forgot" class="sw-link-btn" formnovalidate>{{_('Forgot Password?')}}</button>
+              {# Not a submit button: Enter must sign in, never reset the password (the browser submits with the
+                 first submit button in the form). Clicking this presses the real "forgot" button further down. #}
+              <button type="button" class="sw-link-btn" id="sw-forgot">{{_('Forgot Password?')}}</button>
             {% endif %}
           </div>
           <input type="password" class="form-control" id="password" name="password" autocomplete="current-password" value="{{ password }}">
@@ -99,6 +101,9 @@
           <span>{{_('Remember Me')}}</span>
         </label>
         <button type="submit" name="submit" class="btn btn-primary sw-btn-block">{{_('Sign in')}}</button>
+        {% if config.config_login_type == 0 and mail %}
+          <button type="submit" name="forgot" value="forgot" id="sw-forgot-submit" formnovalidate hidden></button>
+        {% endif %}
 
         {% if config.config_remote_login or (config.config_login_type == 2 and (1 in oauth_check or 2 in oauth_check)) %}
           <div class="sw-or"><span>{{_('or')}}</span></div>
@@ -166,6 +171,12 @@
     });
     document.addEventListener('pointerout', function (e) { if (!e.relatedTarget) rest(); });
     window.addEventListener('blur', rest);
+  })();
+</script>
+<script>
+  (function () {
+    var link = document.getElementById('sw-forgot'), real = document.getElementById('sw-forgot-submit');
+    if (link && real) link.addEventListener('click', function () { real.click(); });
   })();
 </script>
 {% endblock %}
