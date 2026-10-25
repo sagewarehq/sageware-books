@@ -889,8 +889,9 @@ table .bg-primary { background: var(--sw-accent); }
   gap: 20px;
   margin-bottom: 20px;
 }
-.sw-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
-.sw-card-title { display: flex; align-items: center; gap: 12px; min-width: 0; }
+/* Title and actions share a row; on narrow cards the actions wrap below instead of squeezing the title. */
+.sw-card-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.sw-card-title { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1 1 220px; }
 .sw-card-title h2 { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; margin: 0; }
 .sw-card-title p { margin: 2px 0 0; color: var(--sw-muted); font-size: 12.5px; }
 .sw-card-icon {
