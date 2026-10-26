@@ -19,4 +19,6 @@ same files for Claude Code.
 - Theme work: run `docker compose -f docker-compose.dev.yml up -d` (http://localhost:8083) and restart the
   container after editing a template, since Flask caches them. After adding or removing a template override, run
   `python3 tools/gen_compose.py`. Bump `version` in `overrides/templates/sageware_macros.html` when CSS or icons change.
+- `overrides/cps/*.py` are whole copies of the pinned image's modules; when bumping the image, re-copy them and
+  re-apply the change each one notes at the top. A broken one takes the whole app down, not one page.
 - Keep the element ids that Calibre-Web's JavaScript binds to; each override notes them at the top.

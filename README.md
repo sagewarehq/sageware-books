@@ -7,6 +7,8 @@ a set of template overrides and static files bind-mounted on top of it.
 
 - `overrides/templates/` replaces (or adds) Calibre-Web templates. Element ids that Calibre-Web's
   JavaScript binds to are kept; see the comment at the top of each file.
+- `overrides/cps/` replaces Calibre-Web Python modules, copied from the pinned image with a small
+  change noted at the top (`helper.py`: the invite email links to the site). Re-copy them when bumping the image.
 - `overrides/static/sageware/` holds the stylesheet, the Inter font and a Lucide icon sprite
   (`tools/build_icons.py`, same Lucide version as Talaria).
 - `docker-compose.yml` is the production compose Dokploy deploys from this repo.
@@ -21,7 +23,7 @@ python3 dev/seed.py   # upload any EPUBs you put in dev/epubs (git-ignored)
 ```
 
 Flask caches templates: restart the container after editing one. After adding or removing a template
-override, run `python3 tools/gen_compose.py` so both compose files mount it.
+or `cps/` override, run `python3 tools/gen_compose.py` so both compose files mount it.
 
 Bump `version` in `overrides/templates/sageware_macros.html` when shipping CSS or icon changes, so
 browsers drop their cached copies.

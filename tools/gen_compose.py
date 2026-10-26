@@ -1,7 +1,7 @@
 """Regenerate the theme mounts in docker-compose.yml and docker-compose.dev.yml.
 
 Both run the stock Calibre-Web image and bind-mount every file in overrides/ on top of it.
-Run this after adding or removing a template override.
+Run this after adding or removing a template or cps/ override.
 """
 
 import re
@@ -15,6 +15,8 @@ def mounts(indent):
     lines = [f"{indent}- ./overrides/static/sageware:/app/calibre-web/cps/static/sageware:ro"]
     for tpl in sorted((ROOT / "overrides/templates").glob("*.html")):
         lines.append(f"{indent}- ./overrides/templates/{tpl.name}:/app/calibre-web/cps/templates/{tpl.name}:ro")
+    for py in sorted((ROOT / "overrides/cps").glob("*.py")):
+        lines.append(f"{indent}- ./overrides/cps/{py.name}:/app/calibre-web/cps/{py.name}:ro")
     return lines
 
 

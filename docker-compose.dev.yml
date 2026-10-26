@@ -32,4 +32,5 @@ services:
       - ./overrides/templates/shelf.html:/app/calibre-web/cps/templates/shelf.html:ro
       - ./overrides/templates/shelf_order.html:/app/calibre-web/cps/templates/shelf_order.html:ro
       - ./overrides/templates/user_edit.html:/app/calibre-web/cps/templates/user_edit.html:ro
+      - ./overrides/cps/helper.py:/app/calibre-web/cps/helper.py:ro
       # theme mounts: end
